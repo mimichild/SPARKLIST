@@ -3,6 +3,7 @@ import { useLocalSearchParams } from 'expo-router';
 import { useItems } from '../../src/hooks/useItems';
 import { useAppStore } from '../../src/store/useAppStore';
 import { ConditionChecklist } from '../../src/components/ConditionChecklist';
+import { COLORS, SPACING, TYPE_SCALE } from '../../src/constants/theme';
 
 export default function EditItemScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -14,7 +15,7 @@ export default function EditItemScreen() {
   if (!item) {
     return (
       <View style={styles.container}>
-        <Text>找不到這筆單品</Text>
+        <Text style={styles.notFound}>找不到這筆單品</Text>
       </View>
     );
   }
@@ -36,8 +37,9 @@ export default function EditItemScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 16 },
-  name: { fontSize: 20, fontWeight: 'bold', marginBottom: 4 },
-  price: { fontSize: 16, marginBottom: 8 },
-  note: { fontSize: 14, color: '#666', marginBottom: 16 },
+  container: { padding: SPACING.horizontal, backgroundColor: COLORS.background, flexGrow: 1 },
+  name: { fontSize: TYPE_SCALE.title, fontWeight: 'bold', marginBottom: 4, color: COLORS.textPrimary },
+  price: { fontSize: TYPE_SCALE.body, marginBottom: SPACING.verticalSmall, color: COLORS.textPrimary },
+  note: { fontSize: TYPE_SCALE.small, color: COLORS.textSecondary, marginBottom: SPACING.verticalLarge },
+  notFound: { fontSize: TYPE_SCALE.body, color: COLORS.textSecondary },
 });
