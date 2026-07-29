@@ -20,8 +20,10 @@ export default function MeScreen() {
   }, [hydrate]);
 
   useEffect(() => {
-    setDraftLabels(conditionLabels);
-  }, [conditionLabels]);
+    if (!isEditingConditions) {
+      setDraftLabels(conditionLabels);
+    }
+  }, [conditionLabels, isEditingConditions]);
 
   const handleSaveConditions = async () => {
     await setConditionLabels(draftLabels);
