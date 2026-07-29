@@ -3,6 +3,7 @@
     "name": "SPARK LIST",
     "slug": "sparklist",
     "scheme": "sparklist",
+    "icon": "./assets/icon.png",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
