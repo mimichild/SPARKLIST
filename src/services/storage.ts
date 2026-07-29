@@ -12,8 +12,13 @@ export interface PersistedAppState {
 }
 
 export async function getItems(): Promise<Item[]> {
-  const raw = await AsyncStorage.getItem(ITEMS_KEY);
-  return raw ? JSON.parse(raw) : [];
+  try {
+    const raw = await AsyncStorage.getItem(ITEMS_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch (error) {
+    console.warn('Failed to read or parse items from AsyncStorage:', error);
+    return [];
+  }
 }
 
 export async function saveItems(items: Item[]): Promise<void> {
@@ -21,8 +26,13 @@ export async function saveItems(items: Item[]): Promise<void> {
 }
 
 export async function getHistory(): Promise<HistoryLogEntry[]> {
-  const raw = await AsyncStorage.getItem(HISTORY_KEY);
-  return raw ? JSON.parse(raw) : [];
+  try {
+    const raw = await AsyncStorage.getItem(HISTORY_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch (error) {
+    console.warn('Failed to read or parse history from AsyncStorage:', error);
+    return [];
+  }
 }
 
 export async function saveHistory(history: HistoryLogEntry[]): Promise<void> {
@@ -30,8 +40,13 @@ export async function saveHistory(history: HistoryLogEntry[]): Promise<void> {
 }
 
 export async function getAppState(): Promise<PersistedAppState | null> {
-  const raw = await AsyncStorage.getItem(APP_STATE_KEY);
-  return raw ? JSON.parse(raw) : null;
+  try {
+    const raw = await AsyncStorage.getItem(APP_STATE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (error) {
+    console.warn('Failed to read or parse appState from AsyncStorage:', error);
+    return null;
+  }
 }
 
 export async function saveAppState(state: PersistedAppState): Promise<void> {

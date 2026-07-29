@@ -53,4 +53,34 @@ describe('storage service', () => {
     await storage.saveAppState(state);
     expect(await storage.getAppState()).toEqual(state);
   });
+
+  it('getItems 回傳空陣列當 AsyncStorage 資料損毀', async () => {
+    (AsyncStorage.getItem as jest.Mock).mockResolvedValueOnce('not valid json');
+    expect(await storage.getItems()).toEqual([]);
+  });
+
+  it('getHistory 回傳空陣列當 AsyncStorage 資料損毀', async () => {
+    (AsyncStorage.getItem as jest.Mock).mockResolvedValueOnce('not valid json');
+    expect(await storage.getHistory()).toEqual([]);
+  });
+
+  it('getAppState 回傳 null 當 AsyncStorage 資料損毀', async () => {
+    (AsyncStorage.getItem as jest.Mock).mockResolvedValueOnce('not valid json');
+    expect(await storage.getAppState()).toBeNull();
+  });
+
+  it('getItems 回傳空陣列當 AsyncStorage 讀取失敗', async () => {
+    (AsyncStorage.getItem as jest.Mock).mockRejectedValueOnce(new Error('AsyncStorage error'));
+    expect(await storage.getItems()).toEqual([]);
+  });
+
+  it('getHistory 回傳空陣列當 AsyncStorage 讀取失敗', async () => {
+    (AsyncStorage.getItem as jest.Mock).mockRejectedValueOnce(new Error('AsyncStorage error'));
+    expect(await storage.getHistory()).toEqual([]);
+  });
+
+  it('getAppState 回傳 null 當 AsyncStorage 讀取失敗', async () => {
+    (AsyncStorage.getItem as jest.Mock).mockRejectedValueOnce(new Error('AsyncStorage error'));
+    expect(await storage.getAppState()).toBeNull();
+  });
 });
