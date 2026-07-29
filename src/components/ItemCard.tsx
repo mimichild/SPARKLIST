@@ -1,19 +1,21 @@
 import { View, Text, Pressable, Image, StyleSheet } from 'react-native';
 import type { Item } from '../types/item';
 import { countCheckedConditions } from '../services/itemService';
+import { COLORS, RADIUS, SHADOW, SPACING, TYPE_SCALE } from '../constants/theme';
 
 interface ItemCardProps {
   item: Item;
   variant: 'cooling' | 'unlocked';
+  accentColor: string;
   onPress: () => void;
   onDelete: () => void;
   onMarkPurchased?: () => void;
   onOpenLink?: () => void;
 }
 
-export function ItemCard({ item, variant, onPress, onDelete, onMarkPurchased, onOpenLink }: ItemCardProps) {
+export function ItemCard({ item, variant, accentColor, onPress, onDelete, onMarkPurchased, onOpenLink }: ItemCardProps) {
   return (
-    <View style={styles.card}>
+    <View testID={`item-card-${item.id}`} style={[styles.card, { shadowColor: accentColor }]}>
       <Pressable onPress={onPress}>
         <Image source={{ uri: item.photoUri }} style={styles.photo} />
         <Text style={styles.name}>{item.name}</Text>
@@ -45,16 +47,22 @@ export function ItemCard({ item, variant, onPress, onDelete, onMarkPurchased, on
 }
 
 const styles = StyleSheet.create({
-  card: { padding: 12, borderRadius: 8, borderWidth: 1, borderColor: '#eee', marginBottom: 12 },
-  photo: { width: '100%', height: 120, borderRadius: 6, marginBottom: 8 },
-  name: { fontSize: 16, fontWeight: '600' },
-  price: { fontSize: 14, marginTop: 2 },
-  checks: { fontSize: 12, marginTop: 4, color: '#666' },
-  actions: { flexDirection: 'row', marginTop: 8, gap: 8 },
+  card: {
+    padding: SPACING.horizontal,
+    borderRadius: RADIUS.card,
+    backgroundColor: COLORS.card,
+    marginBottom: SPACING.verticalMedium,
+    ...SHADOW.card,
+  },
+  photo: { width: '100%', height: 120, borderRadius: RADIUS.card - 2, marginBottom: SPACING.verticalSmall },
+  name: { fontSize: TYPE_SCALE.body, fontWeight: '600', color: COLORS.textPrimary },
+  price: { fontSize: TYPE_SCALE.small, marginTop: 2, color: COLORS.textPrimary },
+  checks: { fontSize: TYPE_SCALE.caption, marginTop: 4, color: COLORS.textSecondary },
+  actions: { flexDirection: 'row', marginTop: SPACING.verticalSmall, gap: 8 },
   primaryButton: { paddingVertical: 6, paddingHorizontal: 10, backgroundColor: '#4DABF7', borderRadius: 6 },
   primaryButtonText: { color: '#fff', fontSize: 13 },
-  secondaryButton: { paddingVertical: 6, paddingHorizontal: 10, backgroundColor: '#eee', borderRadius: 6 },
-  secondaryButtonText: { fontSize: 13 },
+  secondaryButton: { paddingVertical: 6, paddingHorizontal: 10, backgroundColor: COLORS.border, borderRadius: 6 },
+  secondaryButtonText: { fontSize: 13, color: COLORS.textPrimary },
   dangerButton: { paddingVertical: 6, paddingHorizontal: 10, backgroundColor: '#FFE3E3', borderRadius: 6 },
-  dangerButtonText: { fontSize: 13, color: '#E03131' },
+  dangerButtonText: { fontSize: 13, color: COLORS.error },
 });
