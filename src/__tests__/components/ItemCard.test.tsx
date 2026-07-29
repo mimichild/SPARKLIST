@@ -27,14 +27,14 @@ describe('ItemCard - cooling variant', () => {
   it('點擊刪除按鈕會呼叫 onDelete', async () => {
     const onDelete = jest.fn();
     await render(<ItemCard item={makeItem()} variant="cooling" onPress={jest.fn()} onDelete={onDelete} />);
-    fireEvent.press(screen.getByText('主動放棄'));
+    await fireEvent.press(screen.getByText('主動放棄'));
     expect(onDelete).toHaveBeenCalled();
   });
 
   it('點擊卡片本身會呼叫 onPress', async () => {
     const onPress = jest.fn();
     await render(<ItemCard item={makeItem()} variant="cooling" onPress={onPress} onDelete={jest.fn()} />);
-    fireEvent.press(screen.getByText('測試外套'));
+    await fireEvent.press(screen.getByText('測試外套'));
     expect(onPress).toHaveBeenCalled();
   });
 });
@@ -53,10 +53,10 @@ describe('ItemCard - unlocked variant', () => {
       />
     );
 
-    fireEvent.press(screen.getByText('標記已購買'));
+    await fireEvent.press(screen.getByText('標記已購買'));
     expect(onMarkPurchased).toHaveBeenCalled();
 
-    fireEvent.press(screen.getByText('刪除（不買了）'));
+    await fireEvent.press(screen.getByText('刪除（不買了）'));
     expect(onDelete).toHaveBeenCalled();
   });
 });
