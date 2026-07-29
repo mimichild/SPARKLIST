@@ -1,6 +1,21 @@
+import { useEffect } from 'react';
 import { Stack } from 'expo-router';
+import * as Notifications from 'expo-notifications';
+import * as notificationService from '../src/services/notificationService';
 
 export default function RootLayout() {
+  useEffect(() => {
+    notificationService.requestNotificationPermission();
+    Notifications.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowBanner: true,
+        shouldShowList: true,
+        shouldPlaySound: true,
+        shouldSetBadge: false,
+      }),
+    });
+  }, []);
+
   return (
     <Stack>
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
