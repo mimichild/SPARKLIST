@@ -1,7 +1,9 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
+import { StyleSheet } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NewItemScreen from '../../../app/item/new';
 import * as storage from '../../services/storage';
+import { DEFAULT_THEME_COLOR } from '../../constants/theme';
 
 const mockPush = jest.fn();
 const mockBack = jest.fn();
@@ -60,5 +62,17 @@ describe('NewItemScreen', () => {
       const items = await storage.getItems();
       expect(items[0].conditionChecks[2]).toBe(true);
     });
+  });
+
+  it('點選解鎖日期快捷按鈕後，該按鈕會顯示選中樣式，其他按鈕不會', async () => {
+    await render(<NewItemScreen />);
+
+    await fireEvent.press(screen.getByText('14 天後'));
+
+    const selectedButton = screen.getByTestId('quick-date-14');
+    expect(StyleSheet.flatten(selectedButton.props.style).backgroundColor).toBe(DEFAULT_THEME_COLOR);
+
+    const unselectedButton = screen.getByTestId('quick-date-7');
+    expect(StyleSheet.flatten(unselectedButton.props.style).backgroundColor).not.toBe(DEFAULT_THEME_COLOR);
   });
 });
