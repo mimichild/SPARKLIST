@@ -75,4 +75,40 @@ describe('NewItemScreen', () => {
     const unselectedButton = screen.getByTestId('quick-date-7');
     expect(StyleSheet.flatten(unselectedButton.props.style).backgroundColor).not.toBe(DEFAULT_THEME_COLOR);
   });
+
+  it('可以改變主意，變更快速日期選項', async () => {
+    await render(<NewItemScreen />);
+
+    // Press 7, then change mind to 14
+    await fireEvent.press(screen.getByText('7 天後'));
+    await fireEvent.press(screen.getByText('14 天後'));
+
+    // Verify visual state: 14 should be selected, 7 should not
+    const selectedButton = screen.getByTestId('quick-date-14');
+    expect(StyleSheet.flatten(selectedButton.props.style).backgroundColor).toBe(DEFAULT_THEME_COLOR);
+
+    const unselectedButton = screen.getByTestId('quick-date-7');
+    expect(StyleSheet.flatten(unselectedButton.props.style).backgroundColor).not.toBe(DEFAULT_THEME_COLOR);
+
+    // Fill in and save
+    await fireEvent.changeText(screen.getByPlaceholderText('單品名稱'), '測試外套');
+    await fireEvent.press(screen.getByText('儲存'));
+
+    // Verify saved item has 14-day unlock date, not 7-day
+    await waitFor(async () => {
+      const items = await storage.getItems();
+      expect(items).toHaveLength(1);
+
+      const unlockDate = new Date(items[0].unlockDate);
+      const now = new Date();
+      const diffMs = unlockDate.getTime() - now.getTime();
+      const diffDays = diffMs / (1000 * 60 * 60 * 24);
+
+      // Should be approximately 14 days (allow 13-15 days to avoid flakiness)
+      expect(diffDays).toBeGreaterThan(13);
+      expect(diffDays).toBeLessThan(15);
+    });
+
+    expect(mockBack).toHaveBeenCalled();
+  });
 });
