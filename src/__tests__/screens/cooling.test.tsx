@@ -10,6 +10,23 @@ jest.mock('expo-router', () => ({
   useRouter: () => ({ push: mockPush }),
 }));
 
+// react-navigation's real useFocusEffect requires a NavigationContainer,
+// which these screens aren't wrapped in during unit tests, and RN Testing
+// Library / jsdom has no concept of real navigation focus events. We mock
+// useFocusEffect to (a) run the callback once on mount, like the real hook
+// does when the screen starts out focused, and (b) stash the latest
+// callback in `mockFocusCallback` so tests can invoke it again to simulate
+// a subsequent focus event (e.g. navigating back to this tab).
+let mockFocusCallback: (() => void) | undefined;
+
+jest.mock('@react-navigation/native', () => ({
+  useFocusEffect: (callback: () => void) => {
+    const React = require('react');
+    mockFocusCallback = callback;
+    React.useEffect(callback, []);
+  },
+}));
+
 beforeEach(async () => {
   await AsyncStorage.clear();
   jest.clearAllMocks();
@@ -52,6 +69,32 @@ describe('CoolingScreen', () => {
 
     await fireEvent.press(screen.getByText('新增單品'));
     expect(mockPush).toHaveBeenCalledWith('/item/new');
+  });
+
+  it('畫面重新取得焦點時會重新載入單品清單（例如從新增單品畫面返回）', async () => {
+    await render(<CoolingScreen />);
+    await waitFor(() => {
+      expect(screen.getByText('目前沒有正在冷靜的單品，按右上角新增一個吧！')).toBeTruthy();
+    });
+
+    // Simulate another screen (e.g. /item/new) writing to storage while
+    // this already-mounted tab screen is not focused.
+    const item = itemService.createItem({
+      name: '新增後才出現的外套',
+      photoUri: 'mock://photo.jpg',
+      price: 300,
+      unlockDate: '2099-01-01T00:00:00.000Z',
+    });
+    await storage.saveItems([item]);
+
+    // Simulate navigating back to this tab (a focus event).
+    await act(async () => {
+      mockFocusCallback?.();
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText('新增後才出現的外套')).toBeTruthy();
+    });
   });
 
   it('點擊主動放棄會移除該單品', async () => {

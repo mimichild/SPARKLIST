@@ -1,11 +1,19 @@
+import { useCallback } from 'react';
 import { View, Text, FlatList, Pressable, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { useItems } from '../../src/hooks/useItems';
 import { ItemCard } from '../../src/components/ItemCard';
 
 export default function CoolingScreen() {
   const router = useRouter();
-  const { coolingItems, deleteItem } = useItems();
+  const { coolingItems, deleteItem, reload } = useItems();
+
+  useFocusEffect(
+    useCallback(() => {
+      reload();
+    }, [reload])
+  );
 
   return (
     <View style={styles.container}>

@@ -1,9 +1,17 @@
+import { useCallback } from 'react';
 import { View, Text, FlatList, Linking, StyleSheet } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { useItems } from '../../src/hooks/useItems';
 import { ItemCard } from '../../src/components/ItemCard';
 
 export default function UnlockedScreen() {
-  const { unlockedItems, deleteItem, markPurchased } = useItems();
+  const { unlockedItems, deleteItem, markPurchased, reload } = useItems();
+
+  useFocusEffect(
+    useCallback(() => {
+      reload();
+    }, [reload])
+  );
 
   return (
     <View style={styles.container}>

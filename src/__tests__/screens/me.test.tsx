@@ -6,6 +6,20 @@ import * as storage from '../../services/storage';
 import { DEFAULT_CONDITION_LABELS } from '../../constants/conditions';
 import { DEFAULT_THEME_COLOR } from '../../constants/theme';
 
+// See cooling.test.tsx for why @react-navigation/native is mocked this way:
+// the real useFocusEffect needs a NavigationContainer that isn't present in
+// these unit-rendered screens, so we run the callback once on mount and
+// stash it so tests can invoke it again to simulate a later focus event.
+let mockFocusCallback: (() => void) | undefined;
+
+jest.mock('@react-navigation/native', () => ({
+  useFocusEffect: (callback: () => void) => {
+    const React = require('react');
+    mockFocusCallback = callback;
+    React.useEffect(callback, []);
+  },
+}));
+
 beforeEach(async () => {
   await AsyncStorage.clear();
   useAppStore.setState({
@@ -32,6 +46,30 @@ describe('MeScreen', () => {
       expect(screen.getByText('王牌忍術師')).toBeTruthy();
       expect(screen.getByText('累計放棄 2 次')).toBeTruthy();
       expect(screen.getByText('估計省下 NT$ 300')).toBeTruthy();
+    });
+  });
+
+  it('畫面重新取得焦點時會重新載入統計數據（例如其他畫面刪除單品後）', async () => {
+    await render(<MeScreen />);
+    await waitFor(() => {
+      expect(screen.getByText('累計放棄 0 次')).toBeTruthy();
+      expect(screen.getByText('估計省下 NT$ 0')).toBeTruthy();
+    });
+
+    // Simulate a delete happening on another already-mounted tab while
+    // this screen isn't focused.
+    await storage.saveHistory([
+      { id: 'h1', itemName: 'A', price: 500, outcome: 'resisted', recordedAt: '2026-07-01T00:00:00.000Z' },
+    ]);
+
+    // Simulate navigating back to this tab (a focus event).
+    await act(async () => {
+      mockFocusCallback?.();
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText('累計放棄 1 次')).toBeTruthy();
+      expect(screen.getByText('估計省下 NT$ 500')).toBeTruthy();
     });
   });
 

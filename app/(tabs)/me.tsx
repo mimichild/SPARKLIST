@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { View, Text, TextInput, Pressable, ScrollView, StyleSheet } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { useAppStore } from '../../src/store/useAppStore';
 import { RankBadge } from '../../src/components/RankBadge';
 import * as storage from '../../src/services/storage';
@@ -15,9 +16,18 @@ export default function MeScreen() {
   const [draftLabels, setDraftLabels] = useState(conditionLabels);
 
   useEffect(() => {
+    // Hydration should only run once on mount, not on every focus.
     hydrate();
-    storage.getHistory().then((history) => setStats(computeStats(history)));
   }, [hydrate]);
+
+  useFocusEffect(
+    useCallback(() => {
+      // Stats (resisted count / saved amount) can go stale after a delete
+      // elsewhere in the app, so re-read them every time this screen
+      // regains focus.
+      storage.getHistory().then((history) => setStats(computeStats(history)));
+    }, [])
+  );
 
   useEffect(() => {
     if (!isEditingConditions) {
