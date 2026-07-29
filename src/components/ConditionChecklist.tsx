@@ -1,4 +1,5 @@
 import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { COLORS, SPACING, TYPE_SCALE } from '../constants/theme';
 
 interface ConditionChecklistProps {
   labels: string[];
@@ -23,8 +24,8 @@ export function ConditionChecklist({ labels, checks, onToggle }: ConditionCheckl
 }
 
 const styles = StyleSheet.create({
-  summary: { fontSize: 14, fontWeight: '600', marginBottom: 8 },
-  row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8 },
-  checkbox: { fontSize: 18, marginRight: 8 },
-  label: { fontSize: 15, flex: 1 },
+  summary: { fontSize: TYPE_SCALE.caption, fontWeight: '600', marginBottom: SPACING.verticalSmall, color: COLORS.textSecondary },
+  row: { flexDirection: 'row', alignItems: 'center', paddingVertical: SPACING.verticalMedium },
+  checkbox: { fontSize: 18, marginRight: SPACING.verticalSmall },
+  label: { fontSize: TYPE_SCALE.body, flex: 1, color: COLORS.textPrimary },
 });
