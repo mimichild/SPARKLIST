@@ -2,10 +2,13 @@ import { useCallback } from 'react';
 import { View, Text, FlatList, Linking, StyleSheet } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useItems } from '../../src/hooks/useItems';
+import { useAppStore } from '../../src/store/useAppStore';
 import { ItemCard } from '../../src/components/ItemCard';
+import { COLORS, SPACING, TYPE_SCALE } from '../../src/constants/theme';
 
 export default function UnlockedScreen() {
   const { unlockedItems, deleteItem, markPurchased, reload } = useItems();
+  const themeColor = useAppStore((s) => s.themeColor);
 
   useFocusEffect(
     useCallback(() => {
@@ -27,6 +30,7 @@ export default function UnlockedScreen() {
             <ItemCard
               item={item}
               variant="unlocked"
+              accentColor={themeColor}
               onPress={() => {}}
               onDelete={() => deleteItem(item.id)}
               onMarkPurchased={() => markPurchased(item.id)}
@@ -40,7 +44,7 @@ export default function UnlockedScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16 },
-  title: { fontSize: 20, fontWeight: 'bold', marginBottom: 16 },
-  empty: { textAlign: 'center', marginTop: 40, color: '#666' },
+  container: { flex: 1, padding: SPACING.horizontal, backgroundColor: COLORS.background },
+  title: { fontSize: TYPE_SCALE.title, fontWeight: 'bold', marginBottom: SPACING.verticalLarge, color: COLORS.textPrimary },
+  empty: { textAlign: 'center', marginTop: 60, color: COLORS.textSecondary, fontSize: TYPE_SCALE.body },
 });
