@@ -23,10 +23,14 @@ export default function MeScreen() {
   const [isEditingConditions, setIsEditingConditions] = useState(false);
   const [draftLabels, setDraftLabels] = useState(conditionLabels);
 
+  // Hydration should only run once on mount, not on every focus.
   useEffect(() => {
     hydrate();
   }, [hydrate]);
 
+  // Stats (resisted count / saved amount) can go stale after a delete
+  // elsewhere in the app, so re-read them every time this screen
+  // regains focus.
   useFocusEffect(
     useCallback(() => {
       storage.getHistory().then((history) => setStats(computeStats(history)));
