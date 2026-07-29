@@ -1,4 +1,5 @@
 import { render, screen, fireEvent } from '@testing-library/react-native';
+import { StyleSheet } from 'react-native';
 import { ItemCard } from '../../components/ItemCard';
 import type { Item } from '../../types/item';
 
@@ -18,7 +19,7 @@ function makeItem(overrides: Partial<Item> = {}): Item {
 
 describe('ItemCard - cooling variant', () => {
   it('顯示名稱、價格與勾選進度', async () => {
-    await render(<ItemCard item={makeItem()} variant="cooling" onPress={jest.fn()} onDelete={jest.fn()} />);
+    await render(<ItemCard item={makeItem()} variant="cooling" accentColor="#EAAFB3" onPress={jest.fn()} onDelete={jest.fn()} />);
     expect(screen.getByText('測試外套')).toBeTruthy();
     expect(screen.getByText('NT$ 1200')).toBeTruthy();
     expect(screen.getByText('已勾選 1 / 6 項')).toBeTruthy();
@@ -26,16 +27,22 @@ describe('ItemCard - cooling variant', () => {
 
   it('點擊刪除按鈕會呼叫 onDelete', async () => {
     const onDelete = jest.fn();
-    await render(<ItemCard item={makeItem()} variant="cooling" onPress={jest.fn()} onDelete={onDelete} />);
+    await render(<ItemCard item={makeItem()} variant="cooling" accentColor="#EAAFB3" onPress={jest.fn()} onDelete={onDelete} />);
     await fireEvent.press(screen.getByText('主動放棄'));
     expect(onDelete).toHaveBeenCalled();
   });
 
   it('點擊卡片本身會呼叫 onPress', async () => {
     const onPress = jest.fn();
-    await render(<ItemCard item={makeItem()} variant="cooling" onPress={onPress} onDelete={jest.fn()} />);
+    await render(<ItemCard item={makeItem()} variant="cooling" accentColor="#EAAFB3" onPress={onPress} onDelete={jest.fn()} />);
     await fireEvent.press(screen.getByText('測試外套'));
     expect(onPress).toHaveBeenCalled();
+  });
+
+  it('卡片陰影顏色會套用傳入的 accentColor', async () => {
+    await render(<ItemCard item={makeItem()} variant="cooling" accentColor="#a7c7e7" onPress={jest.fn()} onDelete={jest.fn()} />);
+    const card = screen.getByTestId('item-card-item-1');
+    expect(StyleSheet.flatten(card.props.style).shadowColor).toBe('#a7c7e7');
   });
 });
 
@@ -47,6 +54,7 @@ describe('ItemCard - unlocked variant', () => {
       <ItemCard
         item={makeItem({ status: 'unlocked' })}
         variant="unlocked"
+        accentColor="#EAAFB3"
         onPress={jest.fn()}
         onDelete={onDelete}
         onMarkPurchased={onMarkPurchased}
