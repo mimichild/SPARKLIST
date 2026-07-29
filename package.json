@@ -33,6 +33,9 @@
     "web": "expo start --web"
   },
   "private": true,
+  "overrides": {
+    "react-dom": "19.1.0"
+  },
   "jest": {
     "preset": "jest-expo",
     "transformIgnorePatterns": [
