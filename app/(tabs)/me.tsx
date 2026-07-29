@@ -5,7 +5,15 @@ import { useAppStore } from '../../src/store/useAppStore';
 import { RankBadge } from '../../src/components/RankBadge';
 import * as storage from '../../src/services/storage';
 import { computeStats } from '../../src/services/itemService';
-import { THEME_COLOR_OPTIONS } from '../../src/constants/theme';
+import {
+  THEME_COLOR_OPTIONS,
+  COLORS,
+  SPACING,
+  RADIUS,
+  SHADOW,
+  TYPE_SCALE,
+  getContrastColor,
+} from '../../src/constants/theme';
 import type { HistoryStats } from '../../src/types/item';
 
 export default function MeScreen() {
@@ -16,15 +24,11 @@ export default function MeScreen() {
   const [draftLabels, setDraftLabels] = useState(conditionLabels);
 
   useEffect(() => {
-    // Hydration should only run once on mount, not on every focus.
     hydrate();
   }, [hydrate]);
 
   useFocusEffect(
     useCallback(() => {
-      // Stats (resisted count / saved amount) can go stale after a delete
-      // elsewhere in the app, so re-read them every time this screen
-      // regains focus.
       storage.getHistory().then((history) => setStats(computeStats(history)));
     }, [])
   );
@@ -44,9 +48,9 @@ export default function MeScreen() {
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.title}>我的</Text>
 
-      <RankBadge points={ninjaPoints} rank={currentRank} />
+      <RankBadge points={ninjaPoints} rank={currentRank} accentColor={themeColor} />
 
-      <View style={styles.statsRow}>
+      <View style={[styles.statsRow, { shadowColor: themeColor }]}>
         <Text style={styles.statText}>累計放棄 {stats.resistedCount} 次</Text>
         <Text style={styles.statText}>估計省下 NT$ {stats.savedAmount}</Text>
       </View>
@@ -57,7 +61,11 @@ export default function MeScreen() {
           <Pressable
             key={color}
             testID={`theme-color-${index}`}
-            style={[styles.themeSwatch, { backgroundColor: color }, themeColor === color && styles.themeSwatchActive]}
+            style={[
+              styles.themeSwatch,
+              { backgroundColor: color },
+              themeColor === color && { borderColor: getContrastColor(color), borderWidth: 3 },
+            ]}
             onPress={() => setThemeColor(color)}
           />
         ))}
@@ -79,8 +87,8 @@ export default function MeScreen() {
               }
             />
           ))}
-          <Pressable style={styles.saveButton} onPress={handleSaveConditions}>
-            <Text style={styles.saveButtonText}>儲存條件</Text>
+          <Pressable style={[styles.saveButton, { backgroundColor: themeColor }]} onPress={handleSaveConditions}>
+            <Text style={[styles.saveButtonText, { color: getContrastColor(themeColor) }]}>儲存條件</Text>
           </Pressable>
         </View>
       ) : null}
@@ -89,15 +97,40 @@ export default function MeScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 16 },
-  title: { fontSize: 20, fontWeight: 'bold', marginBottom: 16 },
-  statsRow: { flexDirection: 'row', justifyContent: 'space-around', marginVertical: 16 },
-  statText: { fontSize: 14 },
-  sectionTitle: { fontSize: 15, fontWeight: '600', marginTop: 16, marginBottom: 8 },
-  themeRow: { flexDirection: 'row', gap: 12 },
+  container: { padding: SPACING.horizontal, backgroundColor: COLORS.background, flexGrow: 1 },
+  title: { fontSize: TYPE_SCALE.title, fontWeight: 'bold', marginBottom: SPACING.verticalLarge, color: COLORS.textPrimary },
+  statsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginVertical: SPACING.verticalLarge,
+    backgroundColor: COLORS.card,
+    borderRadius: RADIUS.card,
+    paddingVertical: SPACING.verticalMedium,
+    ...SHADOW.card,
+  },
+  statText: { fontSize: TYPE_SCALE.small, color: COLORS.textPrimary },
+  sectionTitle: {
+    fontSize: TYPE_SCALE.subtitle,
+    fontWeight: '600',
+    marginTop: SPACING.verticalLarge,
+    marginBottom: SPACING.verticalSmall,
+    color: COLORS.textPrimary,
+  },
+  themeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   themeSwatch: { width: 32, height: 32, borderRadius: 16 },
-  themeSwatchActive: { borderWidth: 3, borderColor: '#333' },
-  conditionInput: { borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 8, marginBottom: 8 },
-  saveButton: { backgroundColor: '#4DABF7', padding: 12, borderRadius: 8, alignItems: 'center', marginTop: 8 },
-  saveButtonText: { color: '#fff', fontWeight: '600' },
+  conditionInput: {
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: RADIUS.card,
+    padding: SPACING.verticalMedium,
+    marginBottom: SPACING.verticalSmall,
+    color: COLORS.textPrimary,
+  },
+  saveButton: {
+    padding: SPACING.verticalMedium,
+    borderRadius: RADIUS.pill,
+    alignItems: 'center',
+    marginTop: SPACING.verticalSmall,
+  },
+  saveButtonText: { fontWeight: '600', fontSize: TYPE_SCALE.body },
 });
