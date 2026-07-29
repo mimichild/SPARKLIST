@@ -65,4 +65,39 @@ describe('MeScreen', () => {
       expect(useAppStore.getState().themeColor).not.toBe(DEFAULT_THEME_COLOR);
     });
   });
+
+  it('當編輯中時，不應被店鋪狀態更新覆蓋（防止競態條件）', async () => {
+    await render(<MeScreen />);
+
+    // 開啟編輯面板
+    await waitFor(() => expect(screen.getByText('編輯六項條件')).toBeTruthy());
+    await fireEvent.press(screen.getByText('編輯六項條件'));
+
+    // 用戶在第一個輸入框輸入新文字
+    const firstInput = screen.getByDisplayValue(DEFAULT_CONDITION_LABELS[0]);
+    const userEditedText = '用戶編輯的文字';
+    await fireEvent.changeText(firstInput, userEditedText);
+
+    // 驗證 draftLabels 已更新
+    await waitFor(() => {
+      expect(screen.getByDisplayValue(userEditedText)).toBeTruthy();
+    });
+
+    // 模擬外部狀態更新（例如 hydrate() 解決後的情況）
+    // 這會觸發 useEffect，但因為 isEditingConditions === true，
+    // 不應該覆蓋 draftLabels
+    const newConditionLabels = ['外部更新的條件1', '外部更新的條件2', '外部更新的條件3', '外部更新的條件4', '外部更新的條件5', '外部更新的條件6'];
+    await act(async () => {
+      useAppStore.setState({ conditionLabels: newConditionLabels });
+    });
+
+    // 關鍵斷言：用戶編輯的文字應該保留，不被覆蓋
+    await waitFor(() => {
+      expect(screen.getByDisplayValue(userEditedText)).toBeTruthy();
+    });
+
+    // 驗證未被修改的欄位確實被外部更新的值替換（用於確認測試邏輯正確）
+    // 因為編輯中，draftLabels 不應該更新
+    expect(screen.queryByDisplayValue(newConditionLabels[1])).toBeFalsy();
+  });
 });
