@@ -31,7 +31,7 @@ SPARKLIST 的五個畫面（我的、冷靜區、解鎖區、新增單品、單�
 
 ```ts
 export const THEME_COLOR_OPTIONS: string[] = [
-  '#FF6B6B', // 珊瑚紅（預設）
+  '#EAAFB3', // 珊瑚粉（預設）
   '#f1aba7', // 櫻花粉
   '#A8D5C2', // 薄荷綠
   '#a7c7e7', // 霧藍
@@ -65,7 +65,7 @@ export function getContrastColor(hex: string): '#FFFFFF' | '#2D2D2D' {
 }
 ```
 
-本次設計文件後續所有畫面說明，均以**預設珊瑚紅 `#FF6B6B`** 為基準描述視覺效果；使用者切換其他主題色後，畫面透過 `getContrastColor` 等既有機制自動適配，不需要為每個色票另外設計。
+本次設計文件後續所有畫面說明，均以**預設珊瑚粉 `#EAAFB3`** 為基準描述視覺效果；使用者切換其他主題色後，畫面透過 `getContrastColor` 等既有機制自動適配，不需要為每個色票另外設計。
 
 ### 3.2 間距／圓角／陰影／字級
 
