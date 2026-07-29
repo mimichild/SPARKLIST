@@ -7,6 +7,20 @@ import * as itemService from '../../services/itemService';
 
 jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
 
+// See cooling.test.tsx for why @react-navigation/native is mocked this way:
+// the real useFocusEffect needs a NavigationContainer that isn't present in
+// these unit-rendered screens, so we run the callback once on mount and
+// stash it so tests can invoke it again to simulate a later focus event.
+let mockFocusCallback: (() => void) | undefined;
+
+jest.mock('@react-navigation/native', () => ({
+  useFocusEffect: (callback: () => void) => {
+    const React = require('react');
+    mockFocusCallback = callback;
+    React.useEffect(callback, []);
+  },
+}));
+
 beforeEach(async () => {
   await AsyncStorage.clear();
   jest.clearAllMocks();
@@ -44,6 +58,26 @@ describe('UnlockedScreen', () => {
 
     await waitFor(() => {
       expect(screen.queryByText('已解鎖外套')).toBeNull();
+    });
+  });
+
+  it('畫面重新取得焦點時會重新載入單品清單（例如條件解鎖後從詳情頁返回）', async () => {
+    await render(<UnlockedScreen />);
+    await waitFor(() => {
+      expect(screen.getByText('目前沒有已解鎖的單品')).toBeTruthy();
+    });
+
+    // Simulate another screen (e.g. /item/[id] after checking conditions)
+    // writing a newly-unlocked item to storage while this tab isn't focused.
+    await storage.saveItems([makeUnlockedItem({ name: '剛解鎖的外套' })]);
+
+    // Simulate navigating back to this tab (a focus event).
+    await act(async () => {
+      mockFocusCallback?.();
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText('剛解鎖的外套')).toBeTruthy();
     });
   });
 
