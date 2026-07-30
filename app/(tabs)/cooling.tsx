@@ -5,12 +5,11 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useItems } from '../../src/hooks/useItems';
 import { useAppStore } from '../../src/store/useAppStore';
 import { ItemCard } from '../../src/components/ItemCard';
-import { UnlockCelebrationModal } from '../../src/components/UnlockCelebrationModal';
 import { COLORS, RADIUS, SHADOW, SPACING, TYPE_SCALE } from '../../src/constants/theme';
 
 export default function CoolingScreen() {
   const router = useRouter();
-  const { coolingItems, deleteItem, reload, newlyUnlockedItems, clearNewlyUnlocked } = useItems();
+  const { coolingItems, deleteItem, reload } = useItems();
   const themeColor = useAppStore((s) => s.themeColor);
   const [isSearchVisible, setIsSearchVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -79,14 +78,6 @@ export default function CoolingScreen() {
       >
         <Text style={styles.addButtonText}>新增單品</Text>
       </Pressable>
-
-      {newlyUnlockedItems.length > 0 ? (
-        <UnlockCelebrationModal
-          item={newlyUnlockedItems[0]}
-          accentColor={themeColor}
-          onDismiss={clearNewlyUnlocked}
-        />
-      ) : null}
     </View>
   );
 }

@@ -1,8 +1,24 @@
-import { render } from '@testing-library/react-native';
+import { render, screen, fireEvent } from '@testing-library/react-native';
 import TabsLayout from '../../../app/(tabs)/_layout';
 import { useAppStore } from '../../store/useAppStore';
+import { useUnlockQueueStore } from '../../store/useUnlockQueueStore';
 import { DEFAULT_CONDITION_LABELS } from '../../constants/conditions';
 import { DEFAULT_THEME_COLOR } from '../../constants/theme';
+import type { Item } from '../../types/item';
+
+function makeUnlockedItem(overrides: Partial<Item> = {}): Item {
+  return {
+    id: 'item-1',
+    name: '剛解鎖的外套',
+    photoUri: 'mock://photo.jpg',
+    price: 1200,
+    createdAt: '2026-07-01T00:00:00.000Z',
+    unlockDate: '2026-07-01T00:00:00.000Z',
+    conditionChecks: [true, true, true, false, false, false],
+    status: 'unlocked',
+    ...overrides,
+  };
+}
 
 let capturedScreenOptions: any;
 
@@ -29,6 +45,7 @@ beforeEach(() => {
     themeColor: DEFAULT_THEME_COLOR,
     hydrated: false,
   });
+  useUnlockQueueStore.setState({ newlyUnlockedItems: [] });
 });
 
 describe('TabsLayout screenOptions', () => {
@@ -73,5 +90,28 @@ describe('TabsLayout screenOptions', () => {
   it('分頁標籤字級放大兩倍（20px，約為預設 10px 的兩倍）', async () => {
     await render(<TabsLayout />);
     expect(capturedScreenOptions.tabBarLabelStyle.fontSize).toBe(20);
+  });
+
+  it('不論哪個分頁偵測到單品解鎖，都會在分頁畫面上顯示恭喜解鎖彈窗', async () => {
+    useUnlockQueueStore.setState({ newlyUnlockedItems: [makeUnlockedItem()] });
+    await render(<TabsLayout />);
+
+    expect(screen.getByText('恭喜解鎖！')).toBeTruthy();
+    expect(screen.getByText('剛解鎖的外套')).toBeTruthy();
+  });
+
+  it('沒有新解鎖的單品時不顯示彈窗', async () => {
+    await render(<TabsLayout />);
+    expect(screen.queryByText('恭喜解鎖！')).toBeNull();
+  });
+
+  it('按下「太棒了！」會把該筆從佇列移除，彈窗跟著消失', async () => {
+    useUnlockQueueStore.setState({ newlyUnlockedItems: [makeUnlockedItem()] });
+    await render(<TabsLayout />);
+
+    await fireEvent.press(screen.getByText('太棒了！'));
+
+    expect(screen.queryByText('恭喜解鎖！')).toBeNull();
+    expect(useUnlockQueueStore.getState().newlyUnlockedItems).toHaveLength(0);
   });
 });

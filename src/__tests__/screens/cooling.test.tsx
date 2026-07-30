@@ -5,6 +5,7 @@ import CoolingScreen from '../../../app/(tabs)/cooling';
 import * as storage from '../../services/storage';
 import * as itemService from '../../services/itemService';
 import { useAppStore } from '../../store/useAppStore';
+import { useUnlockQueueStore } from '../../store/useUnlockQueueStore';
 
 const mockPush = jest.fn();
 
@@ -33,6 +34,7 @@ beforeEach(async () => {
   await AsyncStorage.clear();
   jest.clearAllMocks();
   jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+  useUnlockQueueStore.setState({ newlyUnlockedItems: [] });
 });
 
 describe('CoolingScreen', () => {
@@ -171,7 +173,7 @@ describe('CoolingScreen', () => {
     });
   });
 
-  it('單品剛解鎖時會跳出「恭喜解鎖！」彈窗，關閉後才會消失', async () => {
+  it('單品剛解鎖時會加入全域佇列（恭喜解鎖彈窗實際顯示於 TabsLayout，見 tabsBarOptions.test.tsx）', async () => {
     await storage.saveItems([
       itemService.createItem({
         name: '剛解鎖的外套',
@@ -185,13 +187,8 @@ describe('CoolingScreen', () => {
     await render(<CoolingScreen />);
 
     await waitFor(() => {
-      expect(screen.getByText('恭喜解鎖！')).toBeTruthy();
-    });
-
-    await fireEvent.press(screen.getByText('太棒了！'));
-
-    await waitFor(() => {
-      expect(screen.queryByText('恭喜解鎖！')).toBeNull();
+      expect(useUnlockQueueStore.getState().newlyUnlockedItems).toHaveLength(1);
+      expect(useUnlockQueueStore.getState().newlyUnlockedItems[0].name).toBe('剛解鎖的外套');
     });
   });
 });

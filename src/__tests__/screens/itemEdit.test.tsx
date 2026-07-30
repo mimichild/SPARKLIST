@@ -210,6 +210,67 @@ describe('EditItemScreen', () => {
     });
   });
 
+  it('顯示目前的解鎖日期，並可以用快捷天數按鈕重新設定', async () => {
+    await seedItem({ unlockDate: '2026-08-15T00:00:00.000Z' });
+    await render(<EditItemScreen />);
+
+    await waitFor(() => {
+      expect(screen.getByText('已選擇：2026/8/15')).toBeTruthy();
+    });
+
+    await fireEvent.press(screen.getByText('14 天後'));
+
+    await act(async () => {
+      await fireEvent.press(screen.getByText('儲存'));
+    });
+
+    await waitFor(async () => {
+      const items = await storage.getItems();
+      const unlockDate = new Date(items[0].unlockDate);
+      const now = new Date();
+      const diffDays = (unlockDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
+      expect(diffDays).toBeGreaterThan(13);
+      expect(diffDays).toBeLessThan(15);
+    });
+  });
+
+  it('可以透過日曆自訂解鎖日期，日曆預設顯示目前解鎖日期所在的月份', async () => {
+    await seedItem({ unlockDate: '2026-08-15T00:00:00.000Z' });
+    await render(<EditItemScreen />);
+
+    await waitFor(() => expect(screen.getByText('已選擇：2026/8/15')).toBeTruthy());
+
+    await fireEvent.press(screen.getByText('📅 選日期'));
+    expect(screen.getByText('2026 年 8 月')).toBeTruthy();
+
+    await fireEvent.press(screen.getByTestId('calendar-day-2026-08-20'));
+
+    await act(async () => {
+      await fireEvent.press(screen.getByText('儲存'));
+    });
+
+    await waitFor(async () => {
+      const items = await storage.getItems();
+      const unlockDate = new Date(items[0].unlockDate);
+      expect(unlockDate.getFullYear()).toBe(2026);
+      expect(unlockDate.getMonth()).toBe(7);
+      expect(unlockDate.getDate()).toBe(20);
+    });
+  });
+
+  it('按下取消不會寫回修改過的解鎖日期', async () => {
+    await seedItem({ unlockDate: '2026-08-15T00:00:00.000Z' });
+    await render(<EditItemScreen />);
+
+    await waitFor(() => expect(screen.getByText('已選擇：2026/8/15')).toBeTruthy());
+
+    await fireEvent.press(screen.getByText('30 天後'));
+    await fireEvent.press(screen.getByText('取消'));
+
+    const items = await storage.getItems();
+    expect(items[0].unlockDate).toBe('2026-08-15T00:00:00.000Z');
+  });
+
   it('找不到對應單品時顯示提示文字', async () => {
     mockParams = { id: 'not-exist' };
     await render(<EditItemScreen />);

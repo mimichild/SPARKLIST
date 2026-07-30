@@ -6,6 +6,7 @@ import { useItems } from '../../src/hooks/useItems';
 import { useAppStore } from '../../src/store/useAppStore';
 import { ConditionChecklist } from '../../src/components/ConditionChecklist';
 import { PhotoAdjustModal } from '../../src/components/PhotoAdjustModal';
+import { UnlockDatePicker } from '../../src/components/UnlockDatePicker';
 import { COLORS, RADIUS, SPACING, TYPE_SCALE } from '../../src/constants/theme';
 
 export default function EditItemScreen() {
@@ -26,6 +27,7 @@ export default function EditItemScreen() {
   // 1:1, ...) so it never gets force-cropped to a fixed box.
   const [draftPhotoAspectRatio, setDraftPhotoAspectRatio] = useState<number | undefined>(undefined);
   const [draftChecks, setDraftChecks] = useState<boolean[]>([]);
+  const [draftUnlockDate, setDraftUnlockDate] = useState('');
   const [error, setError] = useState<string | null>(null);
   // Holds a freshly picked photo awaiting the pinch/pan adjust step before
   // it's confirmed as the item's photo.
@@ -43,6 +45,7 @@ export default function EditItemScreen() {
       setDraftPhotoUri(item.photoUri);
       setDraftPhotoAspectRatio(item.photoAspectRatio);
       setDraftChecks(item.conditionChecks);
+      setDraftUnlockDate(item.unlockDate);
       setIsInitialized(true);
     }
   }, [item, isInitialized]);
@@ -120,6 +123,7 @@ export default function EditItemScreen() {
       photoUri: draftPhotoUri,
       photoAspectRatio: draftPhotoAspectRatio,
       conditionChecks: draftChecks,
+      unlockDate: draftUnlockDate,
     });
 
     router.back();
@@ -163,6 +167,16 @@ export default function EditItemScreen() {
       />
       <TextInput style={styles.input} placeholder="購買連結（可選）" value={draftUrl} onChangeText={setDraftUrl} />
       <TextInput style={styles.input} placeholder="備註（可選）" value={draftNote} onChangeText={setDraftNote} />
+
+      <Text style={styles.sectionTitle}>解鎖日期</Text>
+      {draftUnlockDate ? (
+        <UnlockDatePicker
+          unlockDate={draftUnlockDate}
+          onChange={setDraftUnlockDate}
+          accentColor={themeColor}
+          calendarInitialDate={new Date(draftUnlockDate)}
+        />
+      ) : null}
 
       <ConditionChecklist labels={conditionLabels} checks={draftChecks} onToggle={toggleDraftCheck} />
 
@@ -209,6 +223,13 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
   },
   photoButtonText: { fontSize: TYPE_SCALE.small, color: COLORS.textPrimary },
+  sectionTitle: {
+    fontSize: TYPE_SCALE.subtitle,
+    fontWeight: '600',
+    marginTop: SPACING.verticalSmall,
+    marginBottom: SPACING.verticalSmall,
+    color: COLORS.textPrimary,
+  },
   input: {
     borderWidth: 1,
     borderColor: COLORS.border,
