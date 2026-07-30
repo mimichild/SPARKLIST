@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { View, Text, TextInput, Pressable, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, TextInput, Pressable, ScrollView, Alert, StyleSheet } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAppStore } from '../../src/store/useAppStore';
 import { RankBadge } from '../../src/components/RankBadge';
@@ -64,11 +64,13 @@ export default function MeScreen() {
   const handleSaveConditions = async () => {
     await setConditionLabels(draftLabels);
     setIsDirty(false);
+    Alert.alert('已儲存');
   };
 
   const handleCancelConditions = () => {
     setDraftLabels(conditionLabels);
     setIsDirty(false);
+    Alert.alert('已取消，條件內容恢復原狀');
   };
 
   return (
@@ -96,7 +98,7 @@ export default function MeScreen() {
         ))}
       </View>
 
-      <Text style={styles.sectionTitle}>編輯六項條件</Text>
+      <Text style={styles.sectionTitle}>編輯條件</Text>
 
       <View>
         {draftLabels.map((label, index) => (

@@ -1,5 +1,5 @@
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react-native';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import MeScreen from '../../../app/(tabs)/me';
 import { useAppStore } from '../../store/useAppStore';
@@ -23,6 +23,7 @@ jest.mock('@react-navigation/native', () => ({
 
 beforeEach(async () => {
   await AsyncStorage.clear();
+  jest.clearAllMocks();
   useAppStore.setState({
     ninjaPoints: 0,
     currentRank: '新使用者',
@@ -30,6 +31,7 @@ beforeEach(async () => {
     themeColor: DEFAULT_THEME_COLOR,
     hydrated: false,
   });
+  jest.spyOn(Alert, 'alert').mockImplementation(() => {});
 });
 
 describe('MeScreen', () => {
@@ -74,11 +76,11 @@ describe('MeScreen', () => {
     });
   });
 
-  it('可以編輯六項條件文字', async () => {
+  it('可以編輯條件文字', async () => {
     await render(<MeScreen />);
 
     // 條件編輯區塊預設就主動展開顯示，不需要額外點擊才看得到。
-    await waitFor(() => expect(screen.getByText('編輯六項條件')).toBeTruthy());
+    await waitFor(() => expect(screen.getByText('編輯條件')).toBeTruthy());
     expect(screen.getAllByText('刪除')).toHaveLength(6);
 
     const firstInput = screen.getByDisplayValue(DEFAULT_CONDITION_LABELS[0]);
@@ -91,6 +93,7 @@ describe('MeScreen', () => {
     await waitFor(() => {
       expect(useAppStore.getState().conditionLabels[0]).toBe('改過的條件文字');
     });
+    expect(Alert.alert).toHaveBeenCalledWith('已儲存');
   });
 
   it('可以新增一項條件（超過上限 10 項後不再顯示新增按鈕）', async () => {
@@ -146,6 +149,7 @@ describe('MeScreen', () => {
       expect(screen.queryByDisplayValue('不想儲存的文字')).toBeNull();
     });
     expect(useAppStore.getState().conditionLabels).toEqual(DEFAULT_CONDITION_LABELS);
+    expect(Alert.alert).toHaveBeenCalledWith('已取消，條件內容恢復原狀');
   });
 
   it('可以選擇主題色', async () => {
