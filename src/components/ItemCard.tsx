@@ -17,7 +17,11 @@ export function ItemCard({ item, variant, accentColor, onPress, onDelete, onMark
   return (
     <View testID={`item-card-${item.id}`} style={[styles.card, { shadowColor: accentColor }]}>
       <Pressable onPress={onPress} style={styles.content}>
-        <Image testID={`item-thumbnail-${item.id}`} source={{ uri: item.photoUri }} style={styles.thumbnail} />
+        <Image
+          testID={`item-thumbnail-${item.id}`}
+          source={{ uri: item.photoUri }}
+          style={[styles.thumbnail, { aspectRatio: item.photoAspectRatio ?? 1 }]}
+        />
         <View style={styles.info}>
           <Text style={styles.name}>{item.name}</Text>
           <Text style={styles.price}>NT$ {item.price}</Text>
@@ -59,7 +63,7 @@ const styles = StyleSheet.create({
     ...SHADOW.card,
   },
   content: { flex: 1, flexDirection: 'row', alignItems: 'center' },
-  thumbnail: { width: 56, height: 56, borderRadius: RADIUS.card - 4, backgroundColor: COLORS.border },
+  thumbnail: { width: 56, borderRadius: RADIUS.card - 4, backgroundColor: COLORS.border },
   info: { flex: 1, marginLeft: SPACING.verticalMedium },
   name: { fontSize: TYPE_SCALE.body, fontWeight: '600', color: COLORS.textPrimary },
   price: { fontSize: TYPE_SCALE.small, marginTop: 2, color: COLORS.textPrimary },

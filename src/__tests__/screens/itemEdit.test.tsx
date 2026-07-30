@@ -134,7 +134,7 @@ describe('EditItemScreen', () => {
     expect(screen.queryByText('🗑 移除照片')).toBeNull();
   });
 
-  it('點擊「拍照」會呼叫相機並更新最上方顯示的照片，維持拍攝當下的比例', async () => {
+  it('點擊「拍照」會開啟照片調整畫面，確定後才更新最上方顯示的照片，維持拍攝當下的比例', async () => {
     await seedItem({ photoUri: '' });
     await render(<EditItemScreen />);
 
@@ -145,6 +145,13 @@ describe('EditItemScreen', () => {
     });
 
     expect(ImagePicker.launchCameraAsync).toHaveBeenCalled();
+    expect(screen.getByTestId('photo-adjust-viewport')).toBeTruthy();
+    expect(screen.queryByTestId('item-detail-photo')).toBeNull();
+
+    await act(async () => {
+      await fireEvent.press(screen.getByTestId('photo-adjust-confirm'));
+    });
+
     await waitFor(() => {
       const photo = screen.getByTestId('item-detail-photo');
       // mock 相機回傳 1200x900（4:3）。
@@ -152,7 +159,7 @@ describe('EditItemScreen', () => {
     });
   });
 
-  it('點擊「從相簿選擇」會呼叫相簿選擇器並更新最上方顯示的照片，維持原始比例', async () => {
+  it('點擊「從相簿選擇」開啟照片調整畫面後按「取消」，不會套用該張照片', async () => {
     await seedItem({ photoUri: '' });
     await render(<EditItemScreen />);
 
@@ -163,11 +170,12 @@ describe('EditItemScreen', () => {
     });
 
     expect(ImagePicker.launchImageLibraryAsync).toHaveBeenCalled();
-    await waitFor(() => {
-      const photo = screen.getByTestId('item-detail-photo');
-      // mock 相簿回傳 900x1200（3:4）。
-      expect(StyleSheet.flatten(photo.props.style).aspectRatio).toBeCloseTo(900 / 1200);
-    });
+    expect(screen.getByTestId('photo-adjust-viewport')).toBeTruthy();
+
+    await fireEvent.press(screen.getByTestId('photo-adjust-cancel'));
+
+    expect(screen.queryByTestId('photo-adjust-viewport')).toBeNull();
+    expect(screen.queryByTestId('item-detail-photo')).toBeNull();
   });
 
   it('既有單品原本儲存的照片比例，開啟時會直接套用在照片上', async () => {
@@ -188,6 +196,9 @@ describe('EditItemScreen', () => {
 
     await act(async () => {
       await fireEvent.press(screen.getByText('🖼 從相簿選擇'));
+    });
+    await act(async () => {
+      await fireEvent.press(screen.getByTestId('photo-adjust-confirm'));
     });
     await act(async () => {
       await fireEvent.press(screen.getByText('儲存'));

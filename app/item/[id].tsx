@@ -5,6 +5,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useItems } from '../../src/hooks/useItems';
 import { useAppStore } from '../../src/store/useAppStore';
 import { ConditionChecklist } from '../../src/components/ConditionChecklist';
+import { PhotoAdjustModal } from '../../src/components/PhotoAdjustModal';
 import { COLORS, RADIUS, SPACING, TYPE_SCALE } from '../../src/constants/theme';
 
 export default function EditItemScreen() {
@@ -26,6 +27,9 @@ export default function EditItemScreen() {
   const [draftPhotoAspectRatio, setDraftPhotoAspectRatio] = useState<number | undefined>(undefined);
   const [draftChecks, setDraftChecks] = useState<boolean[]>([]);
   const [error, setError] = useState<string | null>(null);
+  // Holds a freshly picked photo awaiting the pinch/pan adjust step before
+  // it's confirmed as the item's photo.
+  const [pendingAsset, setPendingAsset] = useState<{ uri: string; width: number; height: number } | null>(null);
 
   // Populate the draft once from the loaded item. Guarded by isInitialized
   // so later reloads (e.g. another screen recalculating item statuses)
@@ -56,8 +60,24 @@ export default function EditItemScreen() {
   };
 
   const applyPickedAsset = (asset: ImagePicker.ImagePickerAsset) => {
-    setDraftPhotoUri(asset.uri);
-    setDraftPhotoAspectRatio(asset.width && asset.height ? asset.width / asset.height : undefined);
+    if (asset.width && asset.height) {
+      // Route through the adjust step so the user can pinch/pan before
+      // it's confirmed as the item's photo.
+      setPendingAsset({ uri: asset.uri, width: asset.width, height: asset.height });
+    } else {
+      setDraftPhotoUri(asset.uri);
+      setDraftPhotoAspectRatio(undefined);
+    }
+  };
+
+  const handleAdjustConfirm = ({ uri, aspectRatio }: { uri: string; aspectRatio: number }) => {
+    setDraftPhotoUri(uri);
+    setDraftPhotoAspectRatio(aspectRatio);
+    setPendingAsset(null);
+  };
+
+  const handleAdjustCancel = () => {
+    setPendingAsset(null);
   };
 
   const handleTakePhoto = async () => {
@@ -156,6 +176,18 @@ export default function EditItemScreen() {
           <Text style={styles.saveButtonText}>儲存</Text>
         </Pressable>
       </View>
+
+      {pendingAsset ? (
+        <PhotoAdjustModal
+          visible
+          photoUri={pendingAsset.uri}
+          sourceWidth={pendingAsset.width}
+          sourceHeight={pendingAsset.height}
+          accentColor={themeColor}
+          onConfirm={handleAdjustConfirm}
+          onCancel={handleAdjustCancel}
+        />
+      ) : null}
     </ScrollView>
   );
 }
