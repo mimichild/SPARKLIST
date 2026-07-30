@@ -51,7 +51,10 @@ export function useItems() {
   }, [setItems]);
 
   const updateItem = useCallback(
-    async (itemId: string, patch: Partial<Pick<Item, 'name' | 'price' | 'url' | 'note' | 'photoUri' | 'conditionChecks'>>) => {
+    async (
+      itemId: string,
+      patch: Partial<Pick<Item, 'name' | 'price' | 'url' | 'note' | 'photoUri' | 'photoAspectRatio' | 'conditionChecks'>>
+    ) => {
       const next = itemsRef.current.map((i) => (i.id === itemId ? { ...i, ...patch } : i));
       await storage.saveItems(next);
       await reload();

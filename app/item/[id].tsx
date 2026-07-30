@@ -21,6 +21,9 @@ export default function EditItemScreen() {
   const [draftUrl, setDraftUrl] = useState('');
   const [draftNote, setDraftNote] = useState('');
   const [draftPhotoUri, setDraftPhotoUri] = useState('');
+  // Preserves whatever ratio the user shot/picked the photo in (3:4, 4:3,
+  // 1:1, ...) so it never gets force-cropped to a fixed box.
+  const [draftPhotoAspectRatio, setDraftPhotoAspectRatio] = useState<number | undefined>(undefined);
   const [draftChecks, setDraftChecks] = useState<boolean[]>([]);
   const [error, setError] = useState<string | null>(null);
 
@@ -34,6 +37,7 @@ export default function EditItemScreen() {
       setDraftUrl(item.url ?? '');
       setDraftNote(item.note ?? '');
       setDraftPhotoUri(item.photoUri);
+      setDraftPhotoAspectRatio(item.photoAspectRatio);
       setDraftChecks(item.conditionChecks);
       setIsInitialized(true);
     }
@@ -51,12 +55,17 @@ export default function EditItemScreen() {
     setDraftChecks((prev) => prev.map((v, i) => (i === index ? !v : v)));
   };
 
+  const applyPickedAsset = (asset: ImagePicker.ImagePickerAsset) => {
+    setDraftPhotoUri(asset.uri);
+    setDraftPhotoAspectRatio(asset.width && asset.height ? asset.width / asset.height : undefined);
+  };
+
   const handleTakePhoto = async () => {
     const permission = await ImagePicker.requestCameraPermissionsAsync();
     if (permission.status !== 'granted') return;
     const result = await ImagePicker.launchCameraAsync({ quality: 0.7 });
     if (!result.canceled && result.assets[0]) {
-      setDraftPhotoUri(result.assets[0].uri);
+      applyPickedAsset(result.assets[0]);
     }
   };
 
@@ -68,11 +77,14 @@ export default function EditItemScreen() {
       quality: 0.7,
     });
     if (!result.canceled && result.assets[0]) {
-      setDraftPhotoUri(result.assets[0].uri);
+      applyPickedAsset(result.assets[0]);
     }
   };
 
-  const handleRemovePhoto = () => setDraftPhotoUri('');
+  const handleRemovePhoto = () => {
+    setDraftPhotoUri('');
+    setDraftPhotoAspectRatio(undefined);
+  };
 
   const handleSave = async () => {
     if (!draftName.trim()) {
@@ -86,6 +98,7 @@ export default function EditItemScreen() {
       url: draftUrl.trim() || undefined,
       note: draftNote.trim() || undefined,
       photoUri: draftPhotoUri,
+      photoAspectRatio: draftPhotoAspectRatio,
       conditionChecks: draftChecks,
     });
 
@@ -99,7 +112,11 @@ export default function EditItemScreen() {
   return (
     <ScrollView contentContainerStyle={styles.container}>
       {draftPhotoUri ? (
-        <Image testID="item-detail-photo" source={{ uri: draftPhotoUri }} style={styles.heroPhoto} />
+        <Image
+          testID="item-detail-photo"
+          source={{ uri: draftPhotoUri }}
+          style={[styles.heroPhoto, { aspectRatio: draftPhotoAspectRatio ?? 1 }]}
+        />
       ) : null}
 
       <View style={styles.photoButtonsRow}>
@@ -147,7 +164,6 @@ const styles = StyleSheet.create({
   container: { padding: SPACING.horizontal, backgroundColor: COLORS.background, flexGrow: 1 },
   heroPhoto: {
     width: '100%',
-    height: 200,
     borderRadius: RADIUS.card,
     marginBottom: SPACING.verticalSmall,
     backgroundColor: COLORS.border,

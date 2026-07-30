@@ -37,6 +37,9 @@ export default function NewItemScreen() {
   const [url, setUrl] = useState('');
   const [note, setNote] = useState('');
   const [photoUri, setPhotoUri] = useState<string | null>(null);
+  // Preserves whatever ratio the user shot/picked the photo in (3:4, 4:3,
+  // 1:1, ...) so it never gets force-cropped to a fixed box.
+  const [photoAspectRatio, setPhotoAspectRatio] = useState<number | undefined>(undefined);
   // Unlock date always defaults to 7 days out, so the user is never forced
   // to interact with this section — only the name is a required field.
   const [unlockDate, setUnlockDate] = useState(() => addDaysIso(DEFAULT_UNLOCK_DAYS));
@@ -57,12 +60,17 @@ export default function NewItemScreen() {
     setChecks((prev) => prev.map((v, i) => (i === index ? !v : v)));
   };
 
+  const applyPickedAsset = (asset: ImagePicker.ImagePickerAsset) => {
+    setPhotoUri(asset.uri);
+    setPhotoAspectRatio(asset.width && asset.height ? asset.width / asset.height : undefined);
+  };
+
   const handleTakePhoto = async () => {
     const permission = await ImagePicker.requestCameraPermissionsAsync();
     if (permission.status !== 'granted') return;
     const result = await ImagePicker.launchCameraAsync({ quality: 0.7 });
     if (!result.canceled && result.assets[0]) {
-      setPhotoUri(result.assets[0].uri);
+      applyPickedAsset(result.assets[0]);
     }
   };
 
@@ -74,7 +82,7 @@ export default function NewItemScreen() {
       quality: 0.7,
     });
     if (!result.canceled && result.assets[0]) {
-      setPhotoUri(result.assets[0].uri);
+      applyPickedAsset(result.assets[0]);
     }
   };
 
@@ -93,6 +101,7 @@ export default function NewItemScreen() {
     await addItem({
       name: name.trim(),
       photoUri: photoUri ?? '',
+      photoAspectRatio,
       price: Number(price) || 0,
       url: url.trim() || undefined,
       note: note.trim() || undefined,
@@ -121,7 +130,11 @@ export default function NewItemScreen() {
       <Text style={styles.sectionTitle}>相片（可選）</Text>
       <View style={styles.photoRow}>
         {photoUri ? (
-          <Image testID="new-item-photo-preview" source={{ uri: photoUri }} style={styles.photoPreview} />
+          <Image
+            testID="new-item-photo-preview"
+            source={{ uri: photoUri }}
+            style={[styles.photoPreview, { aspectRatio: photoAspectRatio ?? 1 }]}
+          />
         ) : (
           <View testID="new-item-photo-placeholder" style={styles.photoPlaceholder} />
         )}
@@ -208,7 +221,7 @@ const styles = StyleSheet.create({
     color: COLORS.textPrimary,
   },
   photoRow: { flexDirection: 'row', alignItems: 'center', marginBottom: SPACING.verticalLarge },
-  photoPreview: { width: 72, height: 72, borderRadius: RADIUS.card, backgroundColor: COLORS.border },
+  photoPreview: { width: 72, borderRadius: RADIUS.card, backgroundColor: COLORS.border },
   photoPlaceholder: { width: 72, height: 72, borderRadius: RADIUS.card, backgroundColor: COLORS.border },
   photoButtonsColumn: { flex: 1, marginLeft: SPACING.verticalMedium, gap: 8 },
   photoButton: {

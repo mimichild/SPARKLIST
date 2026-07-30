@@ -1,4 +1,5 @@
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react-native';
+import { StyleSheet } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 import EditItemScreen from '../../../app/item/[id]';
@@ -133,7 +134,7 @@ describe('EditItemScreen', () => {
     expect(screen.queryByText('🗑 移除照片')).toBeNull();
   });
 
-  it('點擊「拍照」會呼叫相機並更新最上方顯示的照片', async () => {
+  it('點擊「拍照」會呼叫相機並更新最上方顯示的照片，維持拍攝當下的比例', async () => {
     await seedItem({ photoUri: '' });
     await render(<EditItemScreen />);
 
@@ -145,11 +146,13 @@ describe('EditItemScreen', () => {
 
     expect(ImagePicker.launchCameraAsync).toHaveBeenCalled();
     await waitFor(() => {
-      expect(screen.getByTestId('item-detail-photo')).toBeTruthy();
+      const photo = screen.getByTestId('item-detail-photo');
+      // mock 相機回傳 1200x900（4:3）。
+      expect(StyleSheet.flatten(photo.props.style).aspectRatio).toBeCloseTo(1200 / 900);
     });
   });
 
-  it('點擊「從相簿選擇」會呼叫相簿選擇器並更新最上方顯示的照片', async () => {
+  it('點擊「從相簿選擇」會呼叫相簿選擇器並更新最上方顯示的照片，維持原始比例', async () => {
     await seedItem({ photoUri: '' });
     await render(<EditItemScreen />);
 
@@ -161,7 +164,38 @@ describe('EditItemScreen', () => {
 
     expect(ImagePicker.launchImageLibraryAsync).toHaveBeenCalled();
     await waitFor(() => {
-      expect(screen.getByTestId('item-detail-photo')).toBeTruthy();
+      const photo = screen.getByTestId('item-detail-photo');
+      // mock 相簿回傳 900x1200（3:4）。
+      expect(StyleSheet.flatten(photo.props.style).aspectRatio).toBeCloseTo(900 / 1200);
+    });
+  });
+
+  it('既有單品原本儲存的照片比例，開啟時會直接套用在照片上', async () => {
+    await seedItem({ photoUri: 'mock://existing.jpg', photoAspectRatio: 3 / 4 });
+    await render(<EditItemScreen />);
+
+    await waitFor(() => {
+      const photo = screen.getByTestId('item-detail-photo');
+      expect(StyleSheet.flatten(photo.props.style).aspectRatio).toBeCloseTo(3 / 4);
+    });
+  });
+
+  it('儲存後，新拍攝照片的比例會寫回 storage', async () => {
+    await seedItem({ photoUri: '' });
+    await render(<EditItemScreen />);
+
+    await waitFor(() => expect(screen.getByDisplayValue('編輯測試外套')).toBeTruthy());
+
+    await act(async () => {
+      await fireEvent.press(screen.getByText('🖼 從相簿選擇'));
+    });
+    await act(async () => {
+      await fireEvent.press(screen.getByText('儲存'));
+    });
+
+    await waitFor(async () => {
+      const items = await storage.getItems();
+      expect(items[0].photoAspectRatio).toBeCloseTo(900 / 1200);
     });
   });
 
