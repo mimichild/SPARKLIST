@@ -68,6 +68,55 @@ describe('ItemCard - cooling variant', () => {
     const portraitThumbnail = screen.getByTestId('item-thumbnail-item-2');
     expect(StyleSheet.flatten(portraitThumbnail.props.style).aspectRatio).toBeCloseTo(3 / 4);
   });
+
+  it('顯示距離解鎖日期還有幾天', async () => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-07-15T00:00:00.000Z'));
+    try {
+      await render(
+        <ItemCard
+          item={makeItem({ unlockDate: '2026-07-20T00:00:00.000Z' })}
+          variant="cooling"
+          accentColor="#EAAFB3"
+          onPress={jest.fn()}
+          onDelete={jest.fn()}
+        />
+      );
+      expect(screen.getByText('還有 5 天解鎖')).toBeTruthy();
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('解鎖日期已過但單品仍在冷靜區時（條件尚未勾滿），顯示已到解鎖日', async () => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-07-15T00:00:00.000Z'));
+    try {
+      await render(
+        <ItemCard
+          item={makeItem({ unlockDate: '2026-07-01T00:00:00.000Z' })}
+          variant="cooling"
+          accentColor="#EAAFB3"
+          onPress={jest.fn()}
+          onDelete={jest.fn()}
+        />
+      );
+      expect(screen.getByText('已到解鎖日')).toBeTruthy();
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('解鎖區卡片不顯示解鎖天數', async () => {
+    await render(
+      <ItemCard
+        item={makeItem({ status: 'unlocked' })}
+        variant="unlocked"
+        accentColor="#EAAFB3"
+        onPress={jest.fn()}
+        onDelete={jest.fn()}
+      />
+    );
+    expect(screen.queryByText(/還有.*天解鎖|已到解鎖日/)).toBeNull();
+  });
 });
 
 describe('ItemCard - unlocked variant', () => {

@@ -14,7 +14,19 @@ export function useItems() {
   // (avoids stale-closure bugs when e.g. addItem() is awaited twice in a row).
   const itemsRef = useRef<Item[]>([]);
   const [loaded, setLoaded] = useState(false);
+  // Queue of items that just transitioned cooling -> unlocked, for screens
+  // to pop a celebration modal over. Cleared one at a time via
+  // clearNewlyUnlocked() so multiple simultaneous unlocks show in sequence.
+  const [newlyUnlockedItems, setNewlyUnlockedItems] = useState<Item[]>([]);
   const addNinjaPoint = useAppStore((s) => s.addNinjaPoint);
+  // useItems() reloads once on its own mount (effect below) AND screens
+  // typically also reload on focus, which fires at essentially the same
+  // moment as mount. Without this guard, both calls race to read storage
+  // before either writes the recalculated status back, so both detect the
+  // same cooling->unlocked transition and double-count it (duplicate cheer
+  // sound, duplicate celebration modal entry). A concurrent call instead
+  // just awaits the in-flight one.
+  const reloadPromiseRef = useRef<Promise<void> | null>(null);
 
   const setItems = useCallback((next: Item[]) => {
     itemsRef.current = next;
@@ -22,17 +34,36 @@ export function useItems() {
   }, []);
 
   const reload = useCallback(async () => {
-    const stored = await storage.getItems();
-    const { items: recalculated, newlyUnlockedIds } = itemService.recalculateAllStatuses(stored, new Date());
-
-    if (newlyUnlockedIds.length > 0) {
-      await storage.saveItems(recalculated);
-      audioService.playCheer();
+    if (reloadPromiseRef.current) {
+      return reloadPromiseRef.current;
     }
 
-    setItems(recalculated);
-    setLoaded(true);
+    const promise = (async () => {
+      const stored = await storage.getItems();
+      const { items: recalculated, newlyUnlockedIds } = itemService.recalculateAllStatuses(stored, new Date());
+
+      if (newlyUnlockedIds.length > 0) {
+        await storage.saveItems(recalculated);
+        audioService.playCheer();
+        const unlockedIdSet = new Set(newlyUnlockedIds);
+        setNewlyUnlockedItems((prev) => [...prev, ...recalculated.filter((i) => unlockedIdSet.has(i.id))]);
+      }
+
+      setItems(recalculated);
+      setLoaded(true);
+    })();
+
+    reloadPromiseRef.current = promise;
+    try {
+      await promise;
+    } finally {
+      reloadPromiseRef.current = null;
+    }
   }, [setItems]);
+
+  const clearNewlyUnlocked = useCallback(() => {
+    setNewlyUnlockedItems((prev) => prev.slice(1));
+  }, []);
 
   useEffect(() => {
     reload();
@@ -105,6 +136,8 @@ export function useItems() {
     loaded,
     coolingItems: itemService.sortByUnlockDateAscending(items.filter((i) => i.status === 'cooling')),
     unlockedItems: items.filter((i) => i.status === 'unlocked'),
+    newlyUnlockedItems,
+    clearNewlyUnlocked,
     reload,
     addItem,
     updateItem,

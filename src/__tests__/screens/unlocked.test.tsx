@@ -111,4 +111,38 @@ describe('UnlockedScreen', () => {
     const history = await storage.getHistory();
     expect(history[0].outcome).toBe('resisted');
   });
+
+  it('按下搜尋按鈕會顯示搜尋欄，輸入關鍵字可以篩選單品清單', async () => {
+    await storage.saveItems([
+      makeUnlockedItem({ name: '藍色外套' }),
+      makeUnlockedItem({ name: '白色球鞋' }),
+    ]);
+
+    await render(<UnlockedScreen />);
+    await waitFor(() => expect(screen.getByText('藍色外套')).toBeTruthy());
+
+    expect(screen.queryByTestId('search-input')).toBeNull();
+
+    await fireEvent.press(screen.getByTestId('search-toggle'));
+    await fireEvent.changeText(screen.getByTestId('search-input'), '外套');
+
+    await waitFor(() => {
+      expect(screen.getByText('藍色外套')).toBeTruthy();
+      expect(screen.queryByText('白色球鞋')).toBeNull();
+    });
+  });
+
+  it('搜尋關鍵字找不到符合的單品時顯示提示文字', async () => {
+    await storage.saveItems([makeUnlockedItem({ name: '藍色外套' })]);
+
+    await render(<UnlockedScreen />);
+    await waitFor(() => expect(screen.getByText('藍色外套')).toBeTruthy());
+
+    await fireEvent.press(screen.getByTestId('search-toggle'));
+    await fireEvent.changeText(screen.getByTestId('search-input'), '找不到的關鍵字');
+
+    await waitFor(() => {
+      expect(screen.getByText('找不到符合「找不到的關鍵字」的單品')).toBeTruthy();
+    });
+  });
 });
