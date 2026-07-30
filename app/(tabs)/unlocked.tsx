@@ -23,6 +23,11 @@ export default function UnlockedScreen() {
     deleteItem(itemId);
   };
 
+  const handlePurchased = (itemId: string) => {
+    Alert.alert('恭喜畢業');
+    markPurchased(itemId);
+  };
+
   const trimmedQuery = searchQuery.trim();
   const filteredItems = trimmedQuery
     ? unlockedItems.filter((item) => item.name.toLowerCase().includes(trimmedQuery.toLowerCase()))
@@ -65,7 +70,7 @@ export default function UnlockedScreen() {
               accentColor={themeColor}
               onPress={() => {}}
               onDelete={() => handleResist(item.id)}
-              onMarkPurchased={() => markPurchased(item.id)}
+              onMarkPurchased={() => handlePurchased(item.id)}
               onOpenLink={item.url ? () => Linking.openURL(item.url as string) : undefined}
             />
           )}

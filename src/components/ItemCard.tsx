@@ -38,7 +38,7 @@ export function ItemCard({ item, variant, accentColor, onPress, onDelete, onMark
       <View style={styles.actions}>
         {variant === 'unlocked' && onMarkPurchased ? (
           <Pressable onPress={onMarkPurchased} style={styles.primaryButton}>
-            <Text style={styles.primaryButtonText}>標記已購買</Text>
+            <Text style={styles.primaryButtonText}>已購買</Text>
           </Pressable>
         ) : null}
 
