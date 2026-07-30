@@ -58,6 +58,13 @@ describe('scheduleReminders', () => {
 
     expect(Notifications.scheduleNotificationAsync).not.toHaveBeenCalled();
   });
+
+  it('原生排程失敗時不會拋出例外（避免中斷呼叫端後續的儲存/導頁流程）', async () => {
+    (Notifications.scheduleNotificationAsync as jest.Mock).mockRejectedValueOnce(new Error('native error'));
+    const item = makeItem({ unlockDate: '2026-08-01T00:00:00.000Z' });
+
+    await expect(notificationService.scheduleReminders(item)).resolves.toBeUndefined();
+  });
 });
 
 describe('cancelReminders', () => {
@@ -66,6 +73,12 @@ describe('cancelReminders', () => {
 
     expect(Notifications.cancelScheduledNotificationAsync).toHaveBeenCalledWith('sparklist-3day-item-1');
     expect(Notifications.cancelScheduledNotificationAsync).toHaveBeenCalledWith('sparklist-unlock-item-1');
+  });
+
+  it('原生取消失敗時不會拋出例外', async () => {
+    (Notifications.cancelScheduledNotificationAsync as jest.Mock).mockRejectedValueOnce(new Error('native error'));
+
+    await expect(notificationService.cancelReminders('item-1')).resolves.toBeUndefined();
   });
 });
 

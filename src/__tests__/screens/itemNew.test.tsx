@@ -1,6 +1,8 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react-native';
 import { StyleSheet } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as ImagePicker from 'expo-image-picker';
+import * as Notifications from 'expo-notifications';
 import NewItemScreen from '../../../app/item/new';
 import * as storage from '../../services/storage';
 import { DEFAULT_THEME_COLOR } from '../../constants/theme';
@@ -110,5 +112,118 @@ describe('NewItemScreen', () => {
     });
 
     expect(mockBack).toHaveBeenCalled();
+  });
+
+  it('只填寫名稱，不特別選擇解鎖日期，仍可成功送出（預設 7 天後解鎖）', async () => {
+    await render(<NewItemScreen />);
+
+    await fireEvent.changeText(screen.getByPlaceholderText('單品名稱'), '測試外套');
+    await fireEvent.press(screen.getByText('儲存'));
+
+    await waitFor(async () => {
+      const items = await storage.getItems();
+      expect(items).toHaveLength(1);
+
+      const unlockDate = new Date(items[0].unlockDate);
+      const now = new Date();
+      const diffDays = (unlockDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
+      expect(diffDays).toBeGreaterThan(6);
+      expect(diffDays).toBeLessThan(8);
+    });
+
+    expect(mockBack).toHaveBeenCalled();
+  });
+
+  it('儲存按鈕文字固定為白色，不受主題色明暗影響', async () => {
+    await render(<NewItemScreen />);
+    const label = screen.getByText('儲存');
+    expect(StyleSheet.flatten(label.props.style).color).toBe('#FFFFFF');
+  });
+
+  it('點擊「📅 選日期」可以透過日曆自由挑選日期，並顯示已選擇的日期', async () => {
+    jest.useFakeTimers().setSystemTime(new Date(2026, 6, 15));
+    try {
+      await render(<NewItemScreen />);
+
+      await fireEvent.press(screen.getByText('📅 選日期'));
+      await fireEvent.press(screen.getByTestId('calendar-day-2026-07-25'));
+
+      await waitFor(() => {
+        expect(screen.getByText('已選擇：2026/7/25')).toBeTruthy();
+      });
+
+      await fireEvent.changeText(screen.getByPlaceholderText('單品名稱'), '測試外套');
+      await fireEvent.press(screen.getByText('儲存'));
+
+      await waitFor(async () => {
+        const items = await storage.getItems();
+        expect(items).toHaveLength(1);
+        const unlockDate = new Date(items[0].unlockDate);
+        expect(unlockDate.getFullYear()).toBe(2026);
+        expect(unlockDate.getMonth()).toBe(6);
+        expect(unlockDate.getDate()).toBe(25);
+      });
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('選了快速日期選項後改用日曆挑選日期，快速選項會取消選中', async () => {
+    await render(<NewItemScreen />);
+
+    await fireEvent.press(screen.getByText('14 天後'));
+    await fireEvent.press(screen.getByText('📅 選日期'));
+
+    const dayCells = screen.getAllByTestId(/^calendar-day-/);
+    await fireEvent.press(dayCells[dayCells.length - 1]);
+
+    const quickButton14 = screen.getByTestId('quick-date-14');
+    expect(StyleSheet.flatten(quickButton14.props.style).backgroundColor).not.toBe(DEFAULT_THEME_COLOR);
+  });
+
+  it('點擊「拍照」會呼叫相機並顯示拍攝的照片預覽', async () => {
+    await render(<NewItemScreen />);
+
+    expect(screen.getByTestId('new-item-photo-placeholder')).toBeTruthy();
+
+    await act(async () => {
+      await fireEvent.press(screen.getByText('📷 拍照'));
+    });
+
+    expect(ImagePicker.requestCameraPermissionsAsync).toHaveBeenCalled();
+    expect(ImagePicker.launchCameraAsync).toHaveBeenCalled();
+    await waitFor(() => {
+      expect(screen.getByTestId('new-item-photo-preview')).toBeTruthy();
+    });
+  });
+
+  it('點擊「從相簿選擇」會呼叫相簿選擇器並顯示選取的照片預覽', async () => {
+    await render(<NewItemScreen />);
+
+    await act(async () => {
+      await fireEvent.press(screen.getByText('🖼 從相簿選擇'));
+    });
+
+    expect(ImagePicker.requestMediaLibraryPermissionsAsync).toHaveBeenCalled();
+    expect(ImagePicker.launchImageLibraryAsync).toHaveBeenCalled();
+    await waitFor(() => {
+      expect(screen.getByTestId('new-item-photo-preview')).toBeTruthy();
+    });
+  });
+
+  it('即使原生通知排程失敗，儲存後仍會正常返回上一頁（不應卡住畫面）', async () => {
+    (Notifications.scheduleNotificationAsync as jest.Mock).mockRejectedValueOnce(new Error('native error'));
+
+    await render(<NewItemScreen />);
+    await fireEvent.changeText(screen.getByPlaceholderText('單品名稱'), '測試外套');
+    await fireEvent.press(screen.getByText('儲存'));
+
+    await waitFor(async () => {
+      const items = await storage.getItems();
+      expect(items).toHaveLength(1);
+    });
+    await waitFor(() => {
+      expect(mockBack).toHaveBeenCalled();
+    });
   });
 });
