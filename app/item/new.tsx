@@ -6,6 +6,7 @@ import { useItems } from '../../src/hooks/useItems';
 import { useAppStore } from '../../src/store/useAppStore';
 import { ConditionChecklist } from '../../src/components/ConditionChecklist';
 import { CalendarPickerModal } from '../../src/components/CalendarPickerModal';
+import { PhotoAdjustModal } from '../../src/components/PhotoAdjustModal';
 import { COLORS, RADIUS, SPACING, TYPE_SCALE, getContrastColor } from '../../src/constants/theme';
 
 const QUICK_DAY_OPTIONS = [
@@ -40,6 +41,9 @@ export default function NewItemScreen() {
   // Preserves whatever ratio the user shot/picked the photo in (3:4, 4:3,
   // 1:1, ...) so it never gets force-cropped to a fixed box.
   const [photoAspectRatio, setPhotoAspectRatio] = useState<number | undefined>(undefined);
+  // Holds a freshly picked photo awaiting the pinch/pan adjust step before
+  // it's confirmed as the item's photo.
+  const [pendingAsset, setPendingAsset] = useState<{ uri: string; width: number; height: number } | null>(null);
   // Unlock date always defaults to 7 days out, so the user is never forced
   // to interact with this section — only the name is a required field.
   const [unlockDate, setUnlockDate] = useState(() => addDaysIso(DEFAULT_UNLOCK_DAYS));
@@ -61,8 +65,24 @@ export default function NewItemScreen() {
   };
 
   const applyPickedAsset = (asset: ImagePicker.ImagePickerAsset) => {
-    setPhotoUri(asset.uri);
-    setPhotoAspectRatio(asset.width && asset.height ? asset.width / asset.height : undefined);
+    if (asset.width && asset.height) {
+      // Route through the adjust step so the user can pinch/pan before
+      // it's confirmed as the item's photo.
+      setPendingAsset({ uri: asset.uri, width: asset.width, height: asset.height });
+    } else {
+      setPhotoUri(asset.uri);
+      setPhotoAspectRatio(undefined);
+    }
+  };
+
+  const handleAdjustConfirm = ({ uri, aspectRatio }: { uri: string; aspectRatio: number }) => {
+    setPhotoUri(uri);
+    setPhotoAspectRatio(aspectRatio);
+    setPendingAsset(null);
+  };
+
+  const handleAdjustCancel = () => {
+    setPendingAsset(null);
   };
 
   const handleTakePhoto = async () => {
@@ -190,6 +210,18 @@ export default function NewItemScreen() {
         onSelect={handleSelectCalendarDate}
         onClose={() => setIsCalendarVisible(false)}
       />
+
+      {pendingAsset ? (
+        <PhotoAdjustModal
+          visible
+          photoUri={pendingAsset.uri}
+          sourceWidth={pendingAsset.width}
+          sourceHeight={pendingAsset.height}
+          accentColor={themeColor}
+          onConfirm={handleAdjustConfirm}
+          onCancel={handleAdjustCancel}
+        />
+      ) : null}
 
       <Text style={styles.sectionTitle}>六項條件</Text>
       <ConditionChecklist labels={conditionLabels} checks={checks} onToggle={toggleCheck} />

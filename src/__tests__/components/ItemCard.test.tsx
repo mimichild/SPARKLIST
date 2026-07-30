@@ -45,11 +45,28 @@ describe('ItemCard - cooling variant', () => {
     expect(StyleSheet.flatten(card.props.style).shadowColor).toBe('#a7c7e7');
   });
 
-  it('圖片以固定大小的小縮圖顯示在資料左側，而非滿版大圖', async () => {
+  it('圖片以固定寬度的小縮圖顯示在資料左側，而非滿版大圖', async () => {
     await render(<ItemCard item={makeItem()} variant="cooling" accentColor="#EAAFB3" onPress={jest.fn()} onDelete={jest.fn()} />);
     const thumbnail = screen.getByTestId('item-thumbnail-item-1');
     expect(StyleSheet.flatten(thumbnail.props.style).width).toBe(56);
-    expect(StyleSheet.flatten(thumbnail.props.style).height).toBe(56);
+  });
+
+  it('縮圖比例跟隨單品照片本身的比例，沒有比例資訊時預設為 1:1', async () => {
+    await render(<ItemCard item={makeItem()} variant="cooling" accentColor="#EAAFB3" onPress={jest.fn()} onDelete={jest.fn()} />);
+    const squareThumbnail = screen.getByTestId('item-thumbnail-item-1');
+    expect(StyleSheet.flatten(squareThumbnail.props.style).aspectRatio).toBe(1);
+
+    await render(
+      <ItemCard
+        item={makeItem({ id: 'item-2', photoAspectRatio: 3 / 4 })}
+        variant="cooling"
+        accentColor="#EAAFB3"
+        onPress={jest.fn()}
+        onDelete={jest.fn()}
+      />
+    );
+    const portraitThumbnail = screen.getByTestId('item-thumbnail-item-2');
+    expect(StyleSheet.flatten(portraitThumbnail.props.style).aspectRatio).toBeCloseTo(3 / 4);
   });
 });
 

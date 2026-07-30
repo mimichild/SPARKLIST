@@ -181,7 +181,7 @@ describe('NewItemScreen', () => {
     expect(StyleSheet.flatten(quickButton14.props.style).backgroundColor).not.toBe(DEFAULT_THEME_COLOR);
   });
 
-  it('點擊「拍照」會呼叫相機並顯示拍攝的照片預覽，保持拍攝當下的比例', async () => {
+  it('點擊「拍照」會開啟照片調整畫面，確定後才顯示預覽，並保持拍攝當下的比例', async () => {
     await render(<NewItemScreen />);
 
     expect(screen.getByTestId('new-item-photo-placeholder')).toBeTruthy();
@@ -192,6 +192,15 @@ describe('NewItemScreen', () => {
 
     expect(ImagePicker.requestCameraPermissionsAsync).toHaveBeenCalled();
     expect(ImagePicker.launchCameraAsync).toHaveBeenCalled();
+
+    // 還沒按「確定」，畫面上仍是照片調整彈窗，主畫面預覽尚未更新。
+    expect(screen.getByTestId('photo-adjust-viewport')).toBeTruthy();
+    expect(screen.queryByTestId('new-item-photo-preview')).toBeNull();
+
+    await act(async () => {
+      await fireEvent.press(screen.getByTestId('photo-adjust-confirm'));
+    });
+
     await waitFor(() => {
       const preview = screen.getByTestId('new-item-photo-preview');
       // mock 相機回傳 1200x900（4:3）。
@@ -199,7 +208,7 @@ describe('NewItemScreen', () => {
     });
   });
 
-  it('點擊「從相簿選擇」會呼叫相簿選擇器並顯示選取的照片預覽，保持原始比例', async () => {
+  it('點擊「從相簿選擇」會開啟照片調整畫面，取消則不套用該張照片', async () => {
     await render(<NewItemScreen />);
 
     await act(async () => {
@@ -208,11 +217,13 @@ describe('NewItemScreen', () => {
 
     expect(ImagePicker.requestMediaLibraryPermissionsAsync).toHaveBeenCalled();
     expect(ImagePicker.launchImageLibraryAsync).toHaveBeenCalled();
-    await waitFor(() => {
-      const preview = screen.getByTestId('new-item-photo-preview');
-      // mock 相簿回傳 900x1200（3:4）。
-      expect(StyleSheet.flatten(preview.props.style).aspectRatio).toBeCloseTo(900 / 1200);
-    });
+    expect(screen.getByTestId('photo-adjust-viewport')).toBeTruthy();
+
+    await fireEvent.press(screen.getByText('取消'));
+
+    expect(screen.queryByTestId('photo-adjust-viewport')).toBeNull();
+    expect(screen.queryByTestId('new-item-photo-preview')).toBeNull();
+    expect(screen.getByTestId('new-item-photo-placeholder')).toBeTruthy();
   });
 
   it('儲存後，單品會保留照片本身的比例資訊', async () => {
@@ -220,6 +231,9 @@ describe('NewItemScreen', () => {
 
     await act(async () => {
       await fireEvent.press(screen.getByText('🖼 從相簿選擇'));
+    });
+    await act(async () => {
+      await fireEvent.press(screen.getByTestId('photo-adjust-confirm'));
     });
     await fireEvent.changeText(screen.getByPlaceholderText('單品名稱'), '測試外套');
     await fireEvent.press(screen.getByText('儲存'));
