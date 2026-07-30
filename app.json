@@ -21,7 +21,14 @@
     },
     "plugins": [
       "expo-router",
-      "expo-notifications"
+      "expo-notifications",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "SPARK LIST 需要存取你的相簿，讓你可以為單品新增照片。",
+          "cameraPermission": "SPARK LIST 需要使用相機，讓你可以直接拍攝單品照片。"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

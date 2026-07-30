@@ -16,7 +16,7 @@ interface ItemCardProps {
 export function ItemCard({ item, variant, accentColor, onPress, onDelete, onMarkPurchased, onOpenLink }: ItemCardProps) {
   return (
     <View testID={`item-card-${item.id}`} style={[styles.card, { shadowColor: accentColor }]}>
-      <Pressable onPress={onPress} style={styles.topRow}>
+      <Pressable onPress={onPress} style={styles.content}>
         <Image testID={`item-thumbnail-${item.id}`} source={{ uri: item.photoUri }} style={styles.thumbnail} />
         <View style={styles.info}>
           <Text style={styles.name}>{item.name}</Text>
@@ -50,19 +50,21 @@ export function ItemCard({ item, variant, accentColor, onPress, onDelete, onMark
 
 const styles = StyleSheet.create({
   card: {
+    flexDirection: 'row',
+    alignItems: 'center',
     padding: SPACING.horizontal,
     borderRadius: RADIUS.card,
     backgroundColor: COLORS.card,
     marginBottom: SPACING.verticalMedium,
     ...SHADOW.card,
   },
-  topRow: { flexDirection: 'row', alignItems: 'center' },
+  content: { flex: 1, flexDirection: 'row', alignItems: 'center' },
   thumbnail: { width: 56, height: 56, borderRadius: RADIUS.card - 4, backgroundColor: COLORS.border },
   info: { flex: 1, marginLeft: SPACING.verticalMedium },
   name: { fontSize: TYPE_SCALE.body, fontWeight: '600', color: COLORS.textPrimary },
   price: { fontSize: TYPE_SCALE.small, marginTop: 2, color: COLORS.textPrimary },
   checks: { fontSize: TYPE_SCALE.caption, marginTop: 4, color: COLORS.textSecondary },
-  actions: { flexDirection: 'row', marginTop: SPACING.verticalSmall, gap: 8 },
+  actions: { flexDirection: 'column', alignItems: 'flex-end', gap: 8, marginLeft: SPACING.verticalSmall },
   primaryButton: { paddingVertical: 6, paddingHorizontal: 10, backgroundColor: '#4DABF7', borderRadius: 6 },
   primaryButtonText: { color: '#fff', fontSize: 13 },
   secondaryButton: { paddingVertical: 6, paddingHorizontal: 10, backgroundColor: COLORS.border, borderRadius: 6 },
