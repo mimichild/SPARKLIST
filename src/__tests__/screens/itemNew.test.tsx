@@ -168,6 +168,19 @@ describe('NewItemScreen', () => {
     }
   });
 
+  it('點擊「📅 選日期」時，日曆預設顯示今天所在的月份，而不是預設 7 天後（下週）所在的月份', async () => {
+    // 7/28 + 7 天會跨到 8 月，藉此驗證日曆開啟時看到的是「今天」（7月）而非「下週」（8月）。
+    jest.useFakeTimers().setSystemTime(new Date(2026, 6, 28));
+    try {
+      await render(<NewItemScreen />);
+
+      await fireEvent.press(screen.getByText('📅 選日期'));
+      expect(screen.getByText('2026 年 7 月')).toBeTruthy();
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
   it('選了快速日期選項後改用日曆挑選日期，快速選項會取消選中', async () => {
     await render(<NewItemScreen />);
 

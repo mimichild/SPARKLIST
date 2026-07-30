@@ -4,6 +4,7 @@ import * as Notifications from 'expo-notifications';
 import { __mockPlayer } from 'expo-audio';
 import { useItems } from '../../hooks/useItems';
 import { useAppStore } from '../../store/useAppStore';
+import { useUnlockQueueStore } from '../../store/useUnlockQueueStore';
 import * as storage from '../../services/storage';
 import { DEFAULT_CONDITION_LABELS } from '../../constants/conditions';
 import { DEFAULT_THEME_COLOR } from '../../constants/theme';
@@ -18,6 +19,7 @@ beforeEach(async () => {
     themeColor: DEFAULT_THEME_COLOR,
     hydrated: false,
   });
+  useUnlockQueueStore.setState({ newlyUnlockedItems: [] });
 });
 
 describe('addItem', () => {
