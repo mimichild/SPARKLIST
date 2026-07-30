@@ -1,10 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { View, Text, TextInput, Pressable, ScrollView, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useItems } from '../../src/hooks/useItems';
 import { useAppStore } from '../../src/store/useAppStore';
 import { ConditionChecklist } from '../../src/components/ConditionChecklist';
-import { CONDITION_COUNT } from '../../src/constants/conditions';
 import { COLORS, RADIUS, SPACING, TYPE_SCALE, getContrastColor } from '../../src/constants/theme';
 
 const QUICK_DAY_OPTIONS = [
@@ -30,8 +29,16 @@ export default function NewItemScreen() {
   const [note, setNote] = useState('');
   const [unlockDate, setUnlockDate] = useState<string | null>(null);
   const [selectedDays, setSelectedDays] = useState<number | null>(null);
-  const [checks, setChecks] = useState<boolean[]>(new Array(CONDITION_COUNT).fill(false));
+  const [checks, setChecks] = useState<boolean[]>(() => new Array(conditionLabels.length).fill(false));
   const [error, setError] = useState<string | null>(null);
+
+  // conditionLabels can change length (使用者可新增/刪除條件於「我的」頁面),
+  // so keep the checks array in sync with however many labels currently exist.
+  useEffect(() => {
+    setChecks((prev) =>
+      prev.length === conditionLabels.length ? prev : new Array(conditionLabels.length).fill(false)
+    );
+  }, [conditionLabels.length]);
 
   const toggleCheck = (index: number) => {
     setChecks((prev) => prev.map((v, i) => (i === index ? !v : v)));

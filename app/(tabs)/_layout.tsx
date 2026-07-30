@@ -1,7 +1,10 @@
 import { Tabs } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppStore } from '../../src/store/useAppStore';
-import { COLORS } from '../../src/constants/theme';
+import { COLORS, TYPE_SCALE } from '../../src/constants/theme';
+
+// React Native's default tab bar label size is ~10-11px; doubled per user request.
+const TAB_BAR_LABEL_FONT_SIZE = TYPE_SCALE.subtitle;
 
 export default function TabsLayout() {
   const themeColor = useAppStore((s) => s.themeColor);
@@ -13,6 +16,7 @@ export default function TabsLayout() {
         tabBarActiveTintColor: themeColor,
         tabBarInactiveTintColor: '#999',
         tabBarIcon: () => null,
+        tabBarLabelStyle: { fontSize: TAB_BAR_LABEL_FONT_SIZE },
         tabBarStyle: {
           backgroundColor: COLORS.card,
           borderTopColor: COLORS.border,

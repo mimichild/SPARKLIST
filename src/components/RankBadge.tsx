@@ -33,6 +33,6 @@ const styles = StyleSheet.create({
     ...SHADOW.card,
   },
   rank: { fontSize: TYPE_SCALE.title, fontWeight: 'bold', color: COLORS.textPrimary },
-  points: { fontSize: TYPE_SCALE.small, marginTop: 4, color: COLORS.textPrimary },
+  points: { fontSize: TYPE_SCALE.small, marginTop: 4, color: COLORS.textSecondary },
   progress: { fontSize: TYPE_SCALE.caption, marginTop: 4, color: COLORS.textSecondary },
 });

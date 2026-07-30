@@ -20,7 +20,7 @@ describe('RankBadge', () => {
   });
 
   it('卡片陰影顏色會套用傳入的 accentColor', async () => {
-    await render(<RankBadge points={0} rank="尚無段位" accentColor="#a7c7e7" />);
+    await render(<RankBadge points={0} rank="新使用者" accentColor="#a7c7e7" />);
     const card = screen.getByTestId('rank-badge-card');
     expect(StyleSheet.flatten(card.props.style).shadowColor).toBe('#a7c7e7');
   });

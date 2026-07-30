@@ -8,7 +8,7 @@ describe('rank thresholds', () => {
 
   it('段位名稱與 spec 逐字相符', () => {
     expect(RANK_THRESHOLDS.map((t) => t.name)).toEqual([
-      '尚無段位',
+      '新使用者',
       '忍術小達人',
       '王牌忍術師',
       '金牌忍術師',

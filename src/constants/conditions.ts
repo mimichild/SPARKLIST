@@ -9,3 +9,4 @@ export const DEFAULT_CONDITION_LABELS: string[] = [
 
 export const CONDITION_COUNT = 6;
 export const MIN_CONDITIONS_TO_UNLOCK = 3;
+export const MAX_CONDITION_COUNT = 10;

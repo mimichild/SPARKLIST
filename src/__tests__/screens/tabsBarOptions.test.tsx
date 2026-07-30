@@ -24,7 +24,7 @@ beforeEach(() => {
   capturedScreenOptions = undefined;
   useAppStore.setState({
     ninjaPoints: 0,
-    currentRank: '尚無段位',
+    currentRank: '新使用者',
     conditionLabels: DEFAULT_CONDITION_LABELS,
     themeColor: DEFAULT_THEME_COLOR,
     hydrated: false,
@@ -68,5 +68,10 @@ describe('TabsLayout screenOptions', () => {
   it('頁首文字（標題與返回鍵）為白色', async () => {
     await render(<TabsLayout />);
     expect(capturedScreenOptions.headerTintColor).toBe('#FFFFFF');
+  });
+
+  it('分頁標籤字級放大兩倍（20px，約為預設 10px 的兩倍）', async () => {
+    await render(<TabsLayout />);
+    expect(capturedScreenOptions.tabBarLabelStyle.fontSize).toBe(20);
   });
 });

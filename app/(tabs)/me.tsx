@@ -12,8 +12,8 @@ import {
   RADIUS,
   SHADOW,
   TYPE_SCALE,
-  getContrastColor,
 } from '../../src/constants/theme';
+import { MIN_CONDITIONS_TO_UNLOCK, MAX_CONDITION_COUNT } from '../../src/constants/conditions';
 import type { HistoryStats } from '../../src/types/item';
 
 export default function MeScreen() {
@@ -53,7 +53,7 @@ export default function MeScreen() {
       <RankBadge points={ninjaPoints} rank={currentRank} accentColor={themeColor} />
 
       <View style={[styles.statsRow, { shadowColor: themeColor }]}>
-        <Text style={styles.statText}>累計放棄 {stats.resistedCount} 次</Text>
+        <Text style={styles.statText}>累計忍住 {stats.resistedCount} 次</Text>
         <Text style={styles.statText}>估計省下 NT$ {stats.savedAmount}</Text>
       </View>
 
@@ -66,7 +66,7 @@ export default function MeScreen() {
             style={[
               styles.themeSwatch,
               { backgroundColor: color },
-              themeColor === color && { borderColor: getContrastColor(color), borderWidth: 3 },
+              themeColor === color && styles.themeSwatchSelected,
             ]}
             onPress={() => setThemeColor(color)}
           />
@@ -80,17 +80,36 @@ export default function MeScreen() {
       {isEditingConditions ? (
         <View>
           {draftLabels.map((label, index) => (
-            <TextInput
-              key={index}
-              style={styles.conditionInput}
-              value={label}
-              onChangeText={(text) =>
-                setDraftLabels((prev) => prev.map((l, i) => (i === index ? text : l)))
-              }
-            />
+            <View key={index} style={styles.conditionRow}>
+              <TextInput
+                style={[styles.conditionInput, styles.conditionInputFlex]}
+                value={label}
+                onChangeText={(text) =>
+                  setDraftLabels((prev) => prev.map((l, i) => (i === index ? text : l)))
+                }
+              />
+              {draftLabels.length > MIN_CONDITIONS_TO_UNLOCK ? (
+                <Pressable
+                  style={styles.deleteConditionButton}
+                  onPress={() => setDraftLabels((prev) => prev.filter((_, i) => i !== index))}
+                >
+                  <Text style={styles.deleteConditionButtonText}>刪除</Text>
+                </Pressable>
+              ) : null}
+            </View>
           ))}
+
+          {draftLabels.length < MAX_CONDITION_COUNT ? (
+            <Pressable
+              style={styles.addConditionButton}
+              onPress={() => setDraftLabels((prev) => [...prev, ''])}
+            >
+              <Text style={styles.addConditionButtonText}>＋ 新增條件</Text>
+            </Pressable>
+          ) : null}
+
           <Pressable style={[styles.saveButton, { backgroundColor: themeColor }]} onPress={handleSaveConditions}>
-            <Text style={[styles.saveButtonText, { color: getContrastColor(themeColor) }]}>儲存條件</Text>
+            <Text style={styles.saveButtonText}>儲存</Text>
           </Pressable>
         </View>
       ) : null}
@@ -119,19 +138,37 @@ const styles = StyleSheet.create({
   },
   themeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   themeSwatch: { width: 32, height: 32, borderRadius: 16 },
+  themeSwatchSelected: { borderColor: '#FFFFFF', borderWidth: 3 },
+  conditionRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: SPACING.verticalSmall },
   conditionInput: {
     borderWidth: 1,
     borderColor: COLORS.border,
     borderRadius: RADIUS.card,
     padding: SPACING.verticalMedium,
-    marginBottom: SPACING.verticalSmall,
     color: COLORS.textPrimary,
   },
+  conditionInputFlex: { flex: 1 },
+  deleteConditionButton: {
+    paddingVertical: SPACING.verticalSmall,
+    paddingHorizontal: SPACING.verticalMedium,
+    borderRadius: RADIUS.card,
+    backgroundColor: '#FFE3E3',
+  },
+  deleteConditionButtonText: { fontSize: TYPE_SCALE.caption, color: COLORS.error },
+  addConditionButton: {
+    paddingVertical: SPACING.verticalMedium,
+    borderRadius: RADIUS.card,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    alignItems: 'center',
+    marginBottom: SPACING.verticalSmall,
+  },
+  addConditionButtonText: { fontSize: TYPE_SCALE.small, color: COLORS.textPrimary },
   saveButton: {
     padding: SPACING.verticalMedium,
     borderRadius: RADIUS.pill,
     alignItems: 'center',
     marginTop: SPACING.verticalSmall,
   },
-  saveButtonText: { fontWeight: '600', fontSize: TYPE_SCALE.body },
+  saveButtonText: { fontWeight: '600', fontSize: TYPE_SCALE.body, color: '#FFFFFF' },
 });
