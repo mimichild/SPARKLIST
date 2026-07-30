@@ -43,9 +43,7 @@ export function ItemCard({ item, variant, accentColor, onPress, onDelete, onMark
         ) : null}
 
         <Pressable onPress={onDelete} style={styles.dangerButton}>
-          <Text style={styles.dangerButtonText}>
-            {variant === 'cooling' ? '忍住不買' : '刪除（不買了）'}
-          </Text>
+          <Text style={styles.dangerButtonText}>忍住不買</Text>
         </Pressable>
       </View>
     </View>

@@ -1,5 +1,5 @@
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react-native';
-import { Linking } from 'react-native';
+import { Linking, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import UnlockedScreen from '../../../app/(tabs)/unlocked';
 import * as storage from '../../services/storage';
@@ -24,6 +24,7 @@ jest.mock('@react-navigation/native', () => ({
 beforeEach(async () => {
   await AsyncStorage.clear();
   jest.clearAllMocks();
+  jest.spyOn(Alert, 'alert').mockImplementation(() => {});
 });
 
 function makeUnlockedItem(overrides: Partial<Parameters<typeof itemService.createItem>[0]> = {}) {
@@ -91,15 +92,17 @@ describe('UnlockedScreen', () => {
     expect(Linking.openURL).toHaveBeenCalledWith('https://example.com/product');
   });
 
-  it('點擊刪除仍算忍術點數', async () => {
+  it('已解鎖的單品也可以按「忍住不買」刪除，仍算忍術點數並提示贈點', async () => {
     await storage.saveItems([makeUnlockedItem()]);
 
     await render(<UnlockedScreen />);
     await waitFor(() => expect(screen.getByText('已解鎖外套')).toBeTruthy());
 
     await act(async () => {
-      await fireEvent.press(screen.getByText('刪除（不買了）'));
+      await fireEvent.press(screen.getByText('忍住不買'));
     });
+
+    expect(Alert.alert).toHaveBeenCalledWith('將贈送您一點忍術點數');
 
     await waitFor(() => {
       expect(screen.queryByText('已解鎖外套')).toBeNull();
