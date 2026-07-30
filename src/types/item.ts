@@ -5,6 +5,10 @@ export interface Item {
   id: string;
   name: string;
   photoUri: string;
+  // Captured from the picked photo's own dimensions at selection time, so
+  // the UI can display it at its original ratio (3:4, 4:3, 1:1, ...)
+  // without ever needing a native image-size probe at render time.
+  photoAspectRatio?: number;
   price: number;
   url?: string;
   note?: string;

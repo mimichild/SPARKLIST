@@ -181,7 +181,7 @@ describe('NewItemScreen', () => {
     expect(StyleSheet.flatten(quickButton14.props.style).backgroundColor).not.toBe(DEFAULT_THEME_COLOR);
   });
 
-  it('點擊「拍照」會呼叫相機並顯示拍攝的照片預覽', async () => {
+  it('點擊「拍照」會呼叫相機並顯示拍攝的照片預覽，保持拍攝當下的比例', async () => {
     await render(<NewItemScreen />);
 
     expect(screen.getByTestId('new-item-photo-placeholder')).toBeTruthy();
@@ -193,11 +193,13 @@ describe('NewItemScreen', () => {
     expect(ImagePicker.requestCameraPermissionsAsync).toHaveBeenCalled();
     expect(ImagePicker.launchCameraAsync).toHaveBeenCalled();
     await waitFor(() => {
-      expect(screen.getByTestId('new-item-photo-preview')).toBeTruthy();
+      const preview = screen.getByTestId('new-item-photo-preview');
+      // mock 相機回傳 1200x900（4:3）。
+      expect(StyleSheet.flatten(preview.props.style).aspectRatio).toBeCloseTo(1200 / 900);
     });
   });
 
-  it('點擊「從相簿選擇」會呼叫相簿選擇器並顯示選取的照片預覽', async () => {
+  it('點擊「從相簿選擇」會呼叫相簿選擇器並顯示選取的照片預覽，保持原始比例', async () => {
     await render(<NewItemScreen />);
 
     await act(async () => {
@@ -207,7 +209,24 @@ describe('NewItemScreen', () => {
     expect(ImagePicker.requestMediaLibraryPermissionsAsync).toHaveBeenCalled();
     expect(ImagePicker.launchImageLibraryAsync).toHaveBeenCalled();
     await waitFor(() => {
-      expect(screen.getByTestId('new-item-photo-preview')).toBeTruthy();
+      const preview = screen.getByTestId('new-item-photo-preview');
+      // mock 相簿回傳 900x1200（3:4）。
+      expect(StyleSheet.flatten(preview.props.style).aspectRatio).toBeCloseTo(900 / 1200);
+    });
+  });
+
+  it('儲存後，單品會保留照片本身的比例資訊', async () => {
+    await render(<NewItemScreen />);
+
+    await act(async () => {
+      await fireEvent.press(screen.getByText('🖼 從相簿選擇'));
+    });
+    await fireEvent.changeText(screen.getByPlaceholderText('單品名稱'), '測試外套');
+    await fireEvent.press(screen.getByText('儲存'));
+
+    await waitFor(async () => {
+      const items = await storage.getItems();
+      expect(items[0].photoAspectRatio).toBeCloseTo(900 / 1200);
     });
   });
 

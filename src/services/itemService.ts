@@ -4,6 +4,7 @@ import { MIN_CONDITIONS_TO_UNLOCK, CONDITION_COUNT } from '../constants/conditio
 export interface CreateItemInput {
   name: string;
   photoUri: string;
+  photoAspectRatio?: number;
   price: number;
   url?: string;
   note?: string;
@@ -17,6 +18,7 @@ export function createItem(input: CreateItemInput): Item {
     id: `item-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     name: input.name,
     photoUri: input.photoUri,
+    photoAspectRatio: input.photoAspectRatio,
     price: input.price,
     url: input.url,
     note: input.note,
