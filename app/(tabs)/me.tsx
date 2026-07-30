@@ -20,8 +20,11 @@ export default function MeScreen() {
   const { ninjaPoints, currentRank, conditionLabels, themeColor, hydrate, setConditionLabels, setThemeColor } =
     useAppStore();
   const [stats, setStats] = useState<HistoryStats>({ resistedCount: 0, savedAmount: 0 });
-  const [isEditingConditions, setIsEditingConditions] = useState(false);
   const [draftLabels, setDraftLabels] = useState(conditionLabels);
+  // Tracks whether draftLabels has unsaved local edits, so the sync effect
+  // below doesn't clobber them if conditionLabels changes externally
+  // (e.g. hydrate() resolving) while the user is mid-edit.
+  const [isDirty, setIsDirty] = useState(false);
 
   // Hydration should only run once on mount, not on every focus.
   useEffect(() => {
@@ -38,19 +41,34 @@ export default function MeScreen() {
   );
 
   useEffect(() => {
-    if (!isEditingConditions) {
+    if (!isDirty) {
       setDraftLabels(conditionLabels);
     }
-  }, [conditionLabels, isEditingConditions]);
+  }, [conditionLabels, isDirty]);
+
+  const updateDraftLabel = (index: number, text: string) => {
+    setIsDirty(true);
+    setDraftLabels((prev) => prev.map((l, i) => (i === index ? text : l)));
+  };
+
+  const addDraftLabel = () => {
+    setIsDirty(true);
+    setDraftLabels((prev) => [...prev, '']);
+  };
+
+  const deleteDraftLabel = (index: number) => {
+    setIsDirty(true);
+    setDraftLabels((prev) => prev.filter((_, i) => i !== index));
+  };
 
   const handleSaveConditions = async () => {
     await setConditionLabels(draftLabels);
-    setIsEditingConditions(false);
+    setIsDirty(false);
   };
 
   const handleCancelConditions = () => {
     setDraftLabels(conditionLabels);
-    setIsEditingConditions(false);
+    setIsDirty(false);
   };
 
   return (
@@ -78,54 +96,42 @@ export default function MeScreen() {
         ))}
       </View>
 
-      <Pressable onPress={() => setIsEditingConditions((prev) => !prev)}>
-        <Text style={styles.sectionTitle}>編輯六項條件</Text>
-      </Pressable>
+      <Text style={styles.sectionTitle}>編輯六項條件</Text>
 
-      {isEditingConditions ? (
-        <View>
-          {draftLabels.map((label, index) => (
-            <View key={index} style={styles.conditionRow}>
-              <TextInput
-                style={[styles.conditionInput, styles.conditionInputFlex]}
-                value={label}
-                onChangeText={(text) =>
-                  setDraftLabels((prev) => prev.map((l, i) => (i === index ? text : l)))
-                }
-              />
-              {draftLabels.length > MIN_CONDITIONS_TO_UNLOCK ? (
-                <Pressable
-                  style={styles.deleteConditionButton}
-                  onPress={() => setDraftLabels((prev) => prev.filter((_, i) => i !== index))}
-                >
-                  <Text style={styles.deleteConditionButtonText}>刪除</Text>
-                </Pressable>
-              ) : null}
-            </View>
-          ))}
-
-          {draftLabels.length < MAX_CONDITION_COUNT ? (
-            <Pressable
-              style={styles.addConditionButton}
-              onPress={() => setDraftLabels((prev) => [...prev, ''])}
-            >
-              <Text style={styles.addConditionButtonText}>＋ 新增條件</Text>
-            </Pressable>
-          ) : null}
-
-          <View style={styles.conditionActionsRow}>
-            <Pressable style={styles.cancelButton} onPress={handleCancelConditions}>
-              <Text style={styles.cancelButtonText}>取消</Text>
-            </Pressable>
-            <Pressable
-              style={[styles.saveButton, { backgroundColor: themeColor }]}
-              onPress={handleSaveConditions}
-            >
-              <Text style={styles.saveButtonText}>儲存</Text>
-            </Pressable>
+      <View>
+        {draftLabels.map((label, index) => (
+          <View key={index} style={styles.conditionRow}>
+            <TextInput
+              style={[styles.conditionInput, styles.conditionInputFlex]}
+              value={label}
+              onChangeText={(text) => updateDraftLabel(index, text)}
+            />
+            {draftLabels.length > MIN_CONDITIONS_TO_UNLOCK ? (
+              <Pressable style={styles.deleteConditionButton} onPress={() => deleteDraftLabel(index)}>
+                <Text style={styles.deleteConditionButtonText}>刪除</Text>
+              </Pressable>
+            ) : null}
           </View>
+        ))}
+
+        {draftLabels.length < MAX_CONDITION_COUNT ? (
+          <Pressable style={styles.addConditionButton} onPress={addDraftLabel}>
+            <Text style={styles.addConditionButtonText}>＋ 新增條件</Text>
+          </Pressable>
+        ) : null}
+
+        <View style={styles.conditionActionsRow}>
+          <Pressable style={styles.cancelButton} onPress={handleCancelConditions}>
+            <Text style={styles.cancelButtonText}>取消</Text>
+          </Pressable>
+          <Pressable
+            style={[styles.saveButton, { backgroundColor: themeColor }]}
+            onPress={handleSaveConditions}
+          >
+            <Text style={styles.saveButtonText}>儲存</Text>
+          </Pressable>
         </View>
-      ) : null}
+      </View>
     </ScrollView>
   );
 }

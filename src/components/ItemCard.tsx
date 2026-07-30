@@ -16,11 +16,13 @@ interface ItemCardProps {
 export function ItemCard({ item, variant, accentColor, onPress, onDelete, onMarkPurchased, onOpenLink }: ItemCardProps) {
   return (
     <View testID={`item-card-${item.id}`} style={[styles.card, { shadowColor: accentColor }]}>
-      <Pressable onPress={onPress}>
-        <Image source={{ uri: item.photoUri }} style={styles.photo} />
-        <Text style={styles.name}>{item.name}</Text>
-        <Text style={styles.price}>NT$ {item.price}</Text>
-        <Text style={styles.checks}>已勾選 {countCheckedConditions(item)} / {item.conditionChecks.length} 項</Text>
+      <Pressable onPress={onPress} style={styles.topRow}>
+        <Image testID={`item-thumbnail-${item.id}`} source={{ uri: item.photoUri }} style={styles.thumbnail} />
+        <View style={styles.info}>
+          <Text style={styles.name}>{item.name}</Text>
+          <Text style={styles.price}>NT$ {item.price}</Text>
+          <Text style={styles.checks}>已勾選 {countCheckedConditions(item)} / {item.conditionChecks.length} 項</Text>
+        </View>
       </Pressable>
 
       <View style={styles.actions}>
@@ -54,7 +56,9 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.verticalMedium,
     ...SHADOW.card,
   },
-  photo: { width: '100%', height: 120, borderRadius: RADIUS.card - 2, marginBottom: SPACING.verticalSmall },
+  topRow: { flexDirection: 'row', alignItems: 'center' },
+  thumbnail: { width: 56, height: 56, borderRadius: RADIUS.card - 4, backgroundColor: COLORS.border },
+  info: { flex: 1, marginLeft: SPACING.verticalMedium },
   name: { fontSize: TYPE_SCALE.body, fontWeight: '600', color: COLORS.textPrimary },
   price: { fontSize: TYPE_SCALE.small, marginTop: 2, color: COLORS.textPrimary },
   checks: { fontSize: TYPE_SCALE.caption, marginTop: 4, color: COLORS.textSecondary },

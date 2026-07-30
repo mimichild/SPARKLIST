@@ -44,6 +44,13 @@ describe('ItemCard - cooling variant', () => {
     const card = screen.getByTestId('item-card-item-1');
     expect(StyleSheet.flatten(card.props.style).shadowColor).toBe('#a7c7e7');
   });
+
+  it('圖片以固定大小的小縮圖顯示在資料左側，而非滿版大圖', async () => {
+    await render(<ItemCard item={makeItem()} variant="cooling" accentColor="#EAAFB3" onPress={jest.fn()} onDelete={jest.fn()} />);
+    const thumbnail = screen.getByTestId('item-thumbnail-item-1');
+    expect(StyleSheet.flatten(thumbnail.props.style).width).toBe(56);
+    expect(StyleSheet.flatten(thumbnail.props.style).height).toBe(56);
+  });
 });
 
 describe('ItemCard - unlocked variant', () => {
