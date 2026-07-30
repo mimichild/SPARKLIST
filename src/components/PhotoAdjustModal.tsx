@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Modal, View, Text, Pressable, Image, Dimensions, StyleSheet } from 'react-native';
-import { GestureDetector, Gesture } from 'react-native-gesture-handler';
+import { GestureDetector, Gesture, GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { computeCropRect, clampTranslate } from '../services/photoCropService';
 import { COLORS, RADIUS, SPACING, TYPE_SCALE } from '../constants/theme';
@@ -114,7 +114,15 @@ export function PhotoAdjustModal({
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
-      <View style={styles.overlay}>
+      {/*
+        On Android, RN's core Modal mounts its content in a separate native
+        window that is NOT a descendant of the app-root GestureHandlerRootView
+        (the one in app/_layout.tsx) — without a root view scoped to this
+        window too, react-native-gesture-handler never sees any touches
+        here at all. This nested root is what actually makes the gestures
+        work inside a Modal.
+      */}
+      <GestureHandlerRootView style={styles.overlay}>
         <View style={styles.panel}>
           <Text style={styles.title}>調整照片</Text>
 
@@ -155,7 +163,7 @@ export function PhotoAdjustModal({
             </Pressable>
           </View>
         </View>
-      </View>
+      </GestureHandlerRootView>
     </Modal>
   );
 }
