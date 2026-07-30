@@ -1,5 +1,5 @@
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react-native';
-import { Linking, Alert } from 'react-native';
+import { StyleSheet, Linking, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import UnlockedScreen from '../../../app/(tabs)/unlocked';
 import * as storage from '../../services/storage';
@@ -12,6 +12,10 @@ jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
 // these unit-rendered screens, so we run the callback once on mount and
 // stash it so tests can invoke it again to simulate a later focus event.
 let mockFocusCallback: (() => void) | undefined;
+// The search toggle now lives in the header (via navigation.setOptions),
+// not in the screen's own render tree, so tests capture the options object
+// the screen hands to setOptions and render headerRight() in the same tree.
+let capturedNavigationOptions: any;
 
 jest.mock('@react-navigation/native', () => ({
   useFocusEffect: (callback: () => void) => {
@@ -19,12 +23,18 @@ jest.mock('@react-navigation/native', () => ({
     mockFocusCallback = callback;
     React.useEffect(callback, []);
   },
+  useNavigation: () => ({
+    setOptions: (options: any) => {
+      capturedNavigationOptions = options;
+    },
+  }),
 }));
 
 beforeEach(async () => {
   await AsyncStorage.clear();
   jest.clearAllMocks();
   jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+  capturedNavigationOptions = undefined;
 });
 
 function makeUnlockedItem(overrides: Partial<Parameters<typeof itemService.createItem>[0]> = {}) {
@@ -114,37 +124,65 @@ describe('UnlockedScreen', () => {
     expect(history[0].outcome).toBe('resisted');
   });
 
-  it('按下搜尋按鈕會顯示搜尋欄，輸入關鍵字可以篩選單品清單', async () => {
+  it('搜尋按鈕位於頁首（同一橫向高度），文字為白色，按下會顯示搜尋欄並可篩選單品清單', async () => {
     await storage.saveItems([
       makeUnlockedItem({ name: '藍色外套' }),
       makeUnlockedItem({ name: '白色球鞋' }),
     ]);
 
-    await render(<UnlockedScreen />);
-    await waitFor(() => expect(screen.getByText('藍色外套')).toBeTruthy());
+    // Root element must stay the same wrapper type (Fragment) across the
+    // rerender below, or React remounts UnlockedScreen instead of updating
+    // it in place, detaching the header button's onPress from this instance.
+    const main = await render(
+      <>
+        <UnlockedScreen />
+      </>
+    );
+    await waitFor(() => expect(main.getByText('藍色外套')).toBeTruthy());
+    expect(main.queryByTestId('search-input')).toBeNull();
+    expect(capturedNavigationOptions).toBeTruthy();
 
-    expect(screen.queryByTestId('search-input')).toBeNull();
+    await main.rerender(
+      <>
+        <UnlockedScreen />
+        {capturedNavigationOptions.headerRight()}
+      </>
+    );
 
-    await fireEvent.press(screen.getByTestId('search-toggle'));
-    await fireEvent.changeText(screen.getByTestId('search-input'), '外套');
+    expect(StyleSheet.flatten(main.getByText('🔍 搜尋').props.style).color).toBe('#FFFFFF');
+
+    await fireEvent.press(main.getByTestId('search-toggle'));
+    await fireEvent.changeText(main.getByTestId('search-input'), '外套');
 
     await waitFor(() => {
-      expect(screen.getByText('藍色外套')).toBeTruthy();
-      expect(screen.queryByText('白色球鞋')).toBeNull();
+      expect(main.getByText('藍色外套')).toBeTruthy();
+      expect(main.queryByText('白色球鞋')).toBeNull();
     });
   });
 
   it('搜尋關鍵字找不到符合的單品時顯示提示文字', async () => {
     await storage.saveItems([makeUnlockedItem({ name: '藍色外套' })]);
 
-    await render(<UnlockedScreen />);
-    await waitFor(() => expect(screen.getByText('藍色外套')).toBeTruthy());
+    const main = await render(
+      <>
+        <UnlockedScreen />
+      </>
+    );
+    await waitFor(() => expect(main.getByText('藍色外套')).toBeTruthy());
+    expect(capturedNavigationOptions).toBeTruthy();
 
-    await fireEvent.press(screen.getByTestId('search-toggle'));
-    await fireEvent.changeText(screen.getByTestId('search-input'), '找不到的關鍵字');
+    await main.rerender(
+      <>
+        <UnlockedScreen />
+        {capturedNavigationOptions.headerRight()}
+      </>
+    );
+
+    await fireEvent.press(main.getByTestId('search-toggle'));
+    await fireEvent.changeText(main.getByTestId('search-input'), '找不到的關鍵字');
 
     await waitFor(() => {
-      expect(screen.getByText('找不到符合「找不到的關鍵字」的單品')).toBeTruthy();
+      expect(main.getByText('找不到符合「找不到的關鍵字」的單品')).toBeTruthy();
     });
   });
 });

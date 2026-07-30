@@ -3,15 +3,17 @@ import MeScreen from '../../../app/(tabs)/me';
 import CoolingScreen from '../../../app/(tabs)/cooling';
 import UnlockedScreen from '../../../app/(tabs)/unlocked';
 
-// These screens call useFocusEffect on mount to reload their data; the real
-// hook requires a NavigationContainer that isn't present when unit-rendering
-// a bare screen component, so treat it as a mount effect for tests.
+// These screens call useFocusEffect on mount to reload their data, and
+// cooling/unlocked also call useNavigation() to place the search button in
+// the header; both need a NavigationContainer that isn't present when
+// unit-rendering a bare screen component, so both are stubbed out here.
 jest.mock('@react-navigation/native', () => ({
   ...jest.requireActual('@react-navigation/native'),
   useFocusEffect: (callback: () => void) => {
     const React = require('react');
     React.useEffect(callback, []);
   },
+  useNavigation: () => ({ setOptions: () => {} }),
 }));
 
 describe('分頁骨架畫面', () => {
