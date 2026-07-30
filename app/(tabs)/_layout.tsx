@@ -21,6 +21,9 @@ export default function TabsLayout() {
           paddingBottom: insets.bottom,
           paddingTop: 0,
         },
+        headerStyle: { backgroundColor: themeColor },
+        headerTintColor: '#FFFFFF',
+        headerTitleAlign: 'center',
       }}
     >
       <Tabs.Screen name="me" options={{ title: '我的' }} />

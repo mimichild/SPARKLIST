@@ -50,8 +50,6 @@ export default function MeScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>我的</Text>
-
       <RankBadge points={ninjaPoints} rank={currentRank} accentColor={themeColor} />
 
       <View style={[styles.statsRow, { shadowColor: themeColor }]}>
@@ -102,7 +100,6 @@ export default function MeScreen() {
 
 const styles = StyleSheet.create({
   container: { padding: SPACING.horizontal, backgroundColor: COLORS.background, flexGrow: 1 },
-  title: { fontSize: TYPE_SCALE.title, fontWeight: 'bold', marginBottom: SPACING.verticalLarge, color: COLORS.textPrimary },
   statsRow: {
     flexDirection: 'row',
     justifyContent: 'space-around',

@@ -18,8 +18,6 @@ export default function UnlockedScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>解鎖區</Text>
-
       {unlockedItems.length === 0 ? (
         <Text style={styles.empty}>目前沒有已解鎖的單品</Text>
       ) : (
@@ -45,6 +43,5 @@ export default function UnlockedScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: SPACING.horizontal, backgroundColor: COLORS.background },
-  title: { fontSize: TYPE_SCALE.title, fontWeight: 'bold', marginBottom: SPACING.verticalLarge, color: COLORS.textPrimary },
   empty: { textAlign: 'center', marginTop: 60, color: COLORS.textSecondary, fontSize: TYPE_SCALE.body },
 });
