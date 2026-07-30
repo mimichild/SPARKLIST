@@ -1,4 +1,5 @@
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react-native';
+import { StyleSheet } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import MeScreen from '../../../app/(tabs)/me';
 import { useAppStore } from '../../store/useAppStore';
@@ -24,7 +25,7 @@ beforeEach(async () => {
   await AsyncStorage.clear();
   useAppStore.setState({
     ninjaPoints: 0,
-    currentRank: '尚無段位',
+    currentRank: '新使用者',
     conditionLabels: DEFAULT_CONDITION_LABELS,
     themeColor: DEFAULT_THEME_COLOR,
     hydrated: false,
@@ -44,7 +45,7 @@ describe('MeScreen', () => {
 
     await waitFor(() => {
       expect(screen.getByText('王牌忍術師')).toBeTruthy();
-      expect(screen.getByText('累計放棄 2 次')).toBeTruthy();
+      expect(screen.getByText('累計忍住 2 次')).toBeTruthy();
       expect(screen.getByText('估計省下 NT$ 300')).toBeTruthy();
     });
   });
@@ -52,7 +53,7 @@ describe('MeScreen', () => {
   it('畫面重新取得焦點時會重新載入統計數據（例如其他畫面刪除單品後）', async () => {
     await render(<MeScreen />);
     await waitFor(() => {
-      expect(screen.getByText('累計放棄 0 次')).toBeTruthy();
+      expect(screen.getByText('累計忍住 0 次')).toBeTruthy();
       expect(screen.getByText('估計省下 NT$ 0')).toBeTruthy();
     });
 
@@ -68,7 +69,7 @@ describe('MeScreen', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText('累計放棄 1 次')).toBeTruthy();
+      expect(screen.getByText('累計忍住 1 次')).toBeTruthy();
       expect(screen.getByText('估計省下 NT$ 500')).toBeTruthy();
     });
   });
@@ -83,11 +84,53 @@ describe('MeScreen', () => {
     await fireEvent.changeText(firstInput, '改過的條件文字');
 
     await act(async () => {
-      await fireEvent.press(screen.getByText('儲存條件'));
+      await fireEvent.press(screen.getByText('儲存'));
     });
 
     await waitFor(() => {
       expect(useAppStore.getState().conditionLabels[0]).toBe('改過的條件文字');
+    });
+  });
+
+  it('可以新增一項條件（超過上限 10 項後不再顯示新增按鈕）', async () => {
+    // 從 6 項預設條件開始，新增 4 次到 10 項上限。
+    useAppStore.setState({ conditionLabels: DEFAULT_CONDITION_LABELS });
+    await render(<MeScreen />);
+
+    await fireEvent.press(screen.getByText('編輯六項條件'));
+
+    for (let i = 0; i < 4; i += 1) {
+      await fireEvent.press(screen.getByText('＋ 新增條件'));
+    }
+
+    await waitFor(() => {
+      expect(screen.queryAllByDisplayValue('').length).toBe(4);
+      expect(screen.queryByText('＋ 新增條件')).toBeNull();
+    });
+  });
+
+  it('條件超過 3 項時可以刪除；只剩 3 項時刪除按鈕消失', async () => {
+    useAppStore.setState({ conditionLabels: DEFAULT_CONDITION_LABELS });
+    await render(<MeScreen />);
+
+    await fireEvent.press(screen.getByText('編輯六項條件'));
+    expect(screen.getAllByText('刪除')).toHaveLength(6);
+
+    // 刪到只剩 3 項。
+    for (let i = 0; i < 3; i += 1) {
+      await fireEvent.press(screen.getAllByText('刪除')[0]);
+    }
+
+    await waitFor(() => {
+      expect(screen.queryByText('刪除')).toBeNull();
+    });
+
+    await act(async () => {
+      await fireEvent.press(screen.getByText('儲存'));
+    });
+
+    await waitFor(() => {
+      expect(useAppStore.getState().conditionLabels).toHaveLength(3);
     });
   });
 
@@ -101,6 +144,19 @@ describe('MeScreen', () => {
 
     await waitFor(() => {
       expect(useAppStore.getState().themeColor).not.toBe(DEFAULT_THEME_COLOR);
+    });
+  });
+
+  it('選中的主題色色塊，外框固定為白色（不是黑色）', async () => {
+    await render(<MeScreen />);
+
+    await act(async () => {
+      await fireEvent.press(screen.getByTestId('theme-color-1'));
+    });
+
+    await waitFor(() => {
+      const selectedSwatch = screen.getByTestId('theme-color-1');
+      expect(StyleSheet.flatten(selectedSwatch.props.style).borderColor).toBe('#FFFFFF');
     });
   });
 

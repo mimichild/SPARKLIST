@@ -2,8 +2,8 @@ import { computeRank, pointsToNextRank } from '../../services/badgeService';
 
 describe('computeRank', () => {
   it.each([
-    [0, '尚無段位'],
-    [2, '尚無段位'],
+    [0, '新使用者'],
+    [2, '新使用者'],
     [3, '忍術小達人'],
     [9, '忍術小達人'],
     [10, '王牌忍術師'],
@@ -20,7 +20,7 @@ describe('computeRank', () => {
 });
 
 describe('pointsToNextRank', () => {
-  it('尚無段位時回傳距離下一段位的點數', () => {
+  it('新使用者時回傳距離下一段位的點數', () => {
     expect(pointsToNextRank(1)).toBe(2);
   });
 

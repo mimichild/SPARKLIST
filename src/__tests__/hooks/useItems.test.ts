@@ -13,7 +13,7 @@ beforeEach(async () => {
   jest.clearAllMocks();
   useAppStore.setState({
     ninjaPoints: 0,
-    currentRank: '尚無段位',
+    currentRank: '新使用者',
     conditionLabels: DEFAULT_CONDITION_LABELS,
     themeColor: DEFAULT_THEME_COLOR,
     hydrated: false,

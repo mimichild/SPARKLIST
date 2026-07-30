@@ -1,5 +1,5 @@
 export type RankName =
-  | '尚無段位'
+  | '新使用者'
   | '忍術小達人'
   | '王牌忍術師'
   | '金牌忍術師'
@@ -12,7 +12,7 @@ export interface RankThreshold {
 }
 
 export const RANK_THRESHOLDS: RankThreshold[] = [
-  { minPoints: 0, name: '尚無段位' },
+  { minPoints: 0, name: '新使用者' },
   { minPoints: 3, name: '忍術小達人' },
   { minPoints: 10, name: '王牌忍術師' },
   { minPoints: 20, name: '金牌忍術師' },

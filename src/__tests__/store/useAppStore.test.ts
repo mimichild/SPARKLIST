@@ -9,7 +9,7 @@ beforeEach(async () => {
   await AsyncStorage.clear();
   useAppStore.setState({
     ninjaPoints: 0,
-    currentRank: '尚無段位',
+    currentRank: '新使用者',
     conditionLabels: DEFAULT_CONDITION_LABELS,
     themeColor: DEFAULT_THEME_COLOR,
     hydrated: false,
@@ -20,7 +20,7 @@ describe('useAppStore 初始值', () => {
   it('尚未 hydrate 前使用預設值', () => {
     const state = useAppStore.getState();
     expect(state.ninjaPoints).toBe(0);
-    expect(state.currentRank).toBe('尚無段位');
+    expect(state.currentRank).toBe('新使用者');
     expect(state.conditionLabels).toEqual(DEFAULT_CONDITION_LABELS);
     expect(state.themeColor).toBe(DEFAULT_THEME_COLOR);
   });
