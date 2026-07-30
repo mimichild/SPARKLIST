@@ -28,7 +28,7 @@ describe('ItemCard - cooling variant', () => {
   it('點擊刪除按鈕會呼叫 onDelete', async () => {
     const onDelete = jest.fn();
     await render(<ItemCard item={makeItem()} variant="cooling" accentColor="#EAAFB3" onPress={jest.fn()} onDelete={onDelete} />);
-    await fireEvent.press(screen.getByText('主動放棄'));
+    await fireEvent.press(screen.getByText('忍住不買'));
     expect(onDelete).toHaveBeenCalled();
   });
 

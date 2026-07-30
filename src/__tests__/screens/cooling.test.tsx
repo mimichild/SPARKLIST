@@ -1,5 +1,5 @@
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react-native';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import CoolingScreen from '../../../app/(tabs)/cooling';
 import * as storage from '../../services/storage';
@@ -32,6 +32,7 @@ jest.mock('@react-navigation/native', () => ({
 beforeEach(async () => {
   await AsyncStorage.clear();
   jest.clearAllMocks();
+  jest.spyOn(Alert, 'alert').mockImplementation(() => {});
 });
 
 describe('CoolingScreen', () => {
@@ -99,7 +100,7 @@ describe('CoolingScreen', () => {
     });
   });
 
-  it('點擊主動放棄會移除該單品', async () => {
+  it('點擊忍住不買會移除該單品，並提示將贈送忍術點數', async () => {
     const item = itemService.createItem({
       name: '要放棄的外套',
       photoUri: 'mock://photo.jpg',
@@ -112,8 +113,10 @@ describe('CoolingScreen', () => {
     await waitFor(() => expect(screen.getByText('要放棄的外套')).toBeTruthy());
 
     await act(async () => {
-      await fireEvent.press(screen.getByText('主動放棄'));
+      await fireEvent.press(screen.getByText('忍住不買'));
     });
+
+    expect(Alert.alert).toHaveBeenCalledWith('將贈送您一點忍術點數');
 
     await waitFor(() => {
       expect(screen.queryByText('要放棄的外套')).toBeNull();
