@@ -1,7 +1,7 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useLayoutEffect, useState } from 'react';
 import { View, Text, TextInput, FlatList, Pressable, Alert, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useItems } from '../../src/hooks/useItems';
 import { useAppStore } from '../../src/store/useAppStore';
 import { ItemCard } from '../../src/components/ItemCard';
@@ -9,6 +9,7 @@ import { COLORS, RADIUS, SHADOW, SPACING, TYPE_SCALE } from '../../src/constants
 
 export default function CoolingScreen() {
   const router = useRouter();
+  const navigation = useNavigation();
   const { coolingItems, deleteItem, reload } = useItems();
   const themeColor = useAppStore((s) => s.themeColor);
   const [isSearchVisible, setIsSearchVisible] = useState(false);
@@ -19,6 +20,18 @@ export default function CoolingScreen() {
       reload();
     }, [reload])
   );
+
+  // Puts the search toggle in the header itself (same row as the "冷靜區"
+  // title), not as a button inside the screen body.
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <Pressable testID="search-toggle" style={styles.headerSearchButton} onPress={() => setIsSearchVisible((prev) => !prev)}>
+          <Text style={styles.headerSearchButtonText}>🔍 搜尋</Text>
+        </Pressable>
+      ),
+    });
+  }, [navigation]);
 
   const handleResist = (itemId: string) => {
     Alert.alert('將贈送您一點忍術點數');
@@ -32,16 +45,6 @@ export default function CoolingScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.searchRow}>
-        <Pressable
-          testID="search-toggle"
-          style={styles.searchToggle}
-          onPress={() => setIsSearchVisible((prev) => !prev)}
-        >
-          <Text style={styles.searchToggleText}>🔍 搜尋</Text>
-        </Pressable>
-      </View>
-
       {isSearchVisible ? (
         <TextInput
           testID="search-input"
@@ -84,14 +87,8 @@ export default function CoolingScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: SPACING.horizontal, backgroundColor: COLORS.background },
-  searchRow: { flexDirection: 'row', justifyContent: 'flex-end', marginBottom: SPACING.verticalSmall },
-  searchToggle: {
-    paddingVertical: SPACING.verticalSmall,
-    paddingHorizontal: SPACING.verticalMedium,
-    borderRadius: RADIUS.pill,
-    backgroundColor: COLORS.border,
-  },
-  searchToggleText: { fontSize: TYPE_SCALE.small, color: COLORS.textPrimary },
+  headerSearchButton: { paddingHorizontal: SPACING.horizontal },
+  headerSearchButtonText: { fontSize: TYPE_SCALE.small, fontWeight: '600', color: '#FFFFFF' },
   searchInput: {
     borderWidth: 1,
     borderColor: COLORS.border,
