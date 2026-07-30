@@ -134,4 +134,64 @@ describe('CoolingScreen', () => {
     const label = screen.getByText('新增單品');
     expect(StyleSheet.flatten(label.props.style).color).toBe('#FFFFFF');
   });
+
+  it('按下搜尋按鈕會顯示搜尋欄，輸入關鍵字可以篩選單品清單', async () => {
+    await storage.saveItems([
+      itemService.createItem({ name: '藍色外套', photoUri: 'mock://photo.jpg', price: 100, unlockDate: '2099-01-01T00:00:00.000Z' }),
+      itemService.createItem({ name: '白色球鞋', photoUri: 'mock://photo.jpg', price: 200, unlockDate: '2099-01-01T00:00:00.000Z' }),
+    ]);
+
+    await render(<CoolingScreen />);
+    await waitFor(() => expect(screen.getByText('藍色外套')).toBeTruthy());
+
+    expect(screen.queryByTestId('search-input')).toBeNull();
+
+    await fireEvent.press(screen.getByTestId('search-toggle'));
+    await fireEvent.changeText(screen.getByTestId('search-input'), '外套');
+
+    await waitFor(() => {
+      expect(screen.getByText('藍色外套')).toBeTruthy();
+      expect(screen.queryByText('白色球鞋')).toBeNull();
+    });
+  });
+
+  it('搜尋關鍵字找不到符合的單品時顯示提示文字', async () => {
+    await storage.saveItems([
+      itemService.createItem({ name: '藍色外套', photoUri: 'mock://photo.jpg', price: 100, unlockDate: '2099-01-01T00:00:00.000Z' }),
+    ]);
+
+    await render(<CoolingScreen />);
+    await waitFor(() => expect(screen.getByText('藍色外套')).toBeTruthy());
+
+    await fireEvent.press(screen.getByTestId('search-toggle'));
+    await fireEvent.changeText(screen.getByTestId('search-input'), '找不到的關鍵字');
+
+    await waitFor(() => {
+      expect(screen.getByText('找不到符合「找不到的關鍵字」的單品')).toBeTruthy();
+    });
+  });
+
+  it('單品剛解鎖時會跳出「恭喜解鎖！」彈窗，關閉後才會消失', async () => {
+    await storage.saveItems([
+      itemService.createItem({
+        name: '剛解鎖的外套',
+        photoUri: 'mock://photo.jpg',
+        price: 500,
+        unlockDate: '2020-01-01T00:00:00.000Z',
+        initialConditionChecks: [true, true, true, false, false, false],
+      }),
+    ]);
+
+    await render(<CoolingScreen />);
+
+    await waitFor(() => {
+      expect(screen.getByText('恭喜解鎖！')).toBeTruthy();
+    });
+
+    await fireEvent.press(screen.getByText('太棒了！'));
+
+    await waitFor(() => {
+      expect(screen.queryByText('恭喜解鎖！')).toBeNull();
+    });
+  });
 });

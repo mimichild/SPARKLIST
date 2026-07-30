@@ -62,6 +62,70 @@ describe('updateConditionChecks 觸發解鎖', () => {
     expect(result.current.coolingItems).toHaveLength(0);
     expect(result.current.unlockedItems).toHaveLength(1);
     expect(__mockPlayer.play).toHaveBeenCalled();
+
+    expect(result.current.newlyUnlockedItems).toHaveLength(1);
+    expect(result.current.newlyUnlockedItems[0].id).toBe(itemId);
+  });
+
+  it('clearNewlyUnlocked 會從佇列中移除最前面那一筆', async () => {
+    const { result } = await renderHook(() => useItems());
+
+    await act(async () => {
+      await result.current.addItem({
+        name: '外套',
+        photoUri: 'mock://photo.jpg',
+        price: 1000,
+        unlockDate: '2020-01-01T00:00:00.000Z',
+        initialConditionChecks: [true, true, false, false, false, false],
+      });
+    });
+
+    const itemId = result.current.coolingItems[0].id;
+
+    await act(async () => {
+      await result.current.updateConditionChecks(itemId, [true, true, true, false, false, false]);
+    });
+
+    expect(result.current.newlyUnlockedItems).toHaveLength(1);
+
+    await act(async () => {
+      result.current.clearNewlyUnlocked();
+    });
+
+    expect(result.current.newlyUnlockedItems).toHaveLength(0);
+  });
+
+  it('同時觸發兩次 reload()（例如 mount 與畫面 focus 幾乎同時發生）不會把同一次解鎖重複計入佇列', async () => {
+    const { result } = await renderHook(() => useItems());
+
+    await act(async () => {
+      await result.current.addItem({
+        name: '外套',
+        photoUri: 'mock://photo.jpg',
+        price: 1000,
+        unlockDate: '2020-01-01T00:00:00.000Z',
+        initialConditionChecks: [true, true, false, false, false, false],
+      });
+    });
+
+    const itemId = result.current.coolingItems[0].id;
+    await act(async () => {
+      await result.current.updateConditionChecks(itemId, [true, true, true, false, false, false]);
+    });
+    await act(async () => {
+      result.current.clearNewlyUnlocked();
+    });
+
+    // 把已解鎖的單品「手動」改回冷靜區狀態，模擬需要重新偵測一次轉換的情境，
+    // 然後同時觸發兩次 reload（不 await 第一次就馬上呼叫第二次）。
+    const stored = await storage.getItems();
+    await storage.saveItems(stored.map((i) => (i.id === itemId ? { ...i, status: 'cooling' as const } : i)));
+
+    await act(async () => {
+      await Promise.all([result.current.reload(), result.current.reload()]);
+    });
+
+    expect(result.current.newlyUnlockedItems).toHaveLength(1);
   });
 });
 

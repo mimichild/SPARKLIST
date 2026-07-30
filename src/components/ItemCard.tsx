@@ -1,7 +1,12 @@
 import { View, Text, Pressable, Image, StyleSheet } from 'react-native';
 import type { Item } from '../types/item';
-import { countCheckedConditions } from '../services/itemService';
+import { countCheckedConditions, daysUntilUnlock } from '../services/itemService';
 import { COLORS, RADIUS, SHADOW, SPACING, TYPE_SCALE } from '../constants/theme';
+
+function formatDaysLeft(item: Item): string {
+  const days = daysUntilUnlock(item, new Date());
+  return days > 0 ? `還有 ${days} 天解鎖` : '已到解鎖日';
+}
 
 interface ItemCardProps {
   item: Item;
@@ -26,6 +31,7 @@ export function ItemCard({ item, variant, accentColor, onPress, onDelete, onMark
           <Text style={styles.name}>{item.name}</Text>
           <Text style={styles.price}>NT$ {item.price}</Text>
           <Text style={styles.checks}>已勾選 {countCheckedConditions(item)} / {item.conditionChecks.length} 項</Text>
+          {variant === 'cooling' ? <Text style={styles.daysLeft}>{formatDaysLeft(item)}</Text> : null}
         </View>
       </Pressable>
 
@@ -66,6 +72,7 @@ const styles = StyleSheet.create({
   name: { fontSize: TYPE_SCALE.body, fontWeight: '600', color: COLORS.textPrimary },
   price: { fontSize: TYPE_SCALE.small, marginTop: 2, color: COLORS.textPrimary },
   checks: { fontSize: TYPE_SCALE.caption, marginTop: 4, color: COLORS.textSecondary },
+  daysLeft: { fontSize: TYPE_SCALE.caption, marginTop: 4, color: COLORS.error },
   actions: { flexDirection: 'column', alignItems: 'flex-end', gap: 8, marginLeft: SPACING.verticalSmall },
   primaryButton: { paddingVertical: 6, paddingHorizontal: 10, backgroundColor: '#4DABF7', borderRadius: 6 },
   primaryButtonText: { color: '#fff', fontSize: 13 },
