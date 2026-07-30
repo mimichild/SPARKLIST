@@ -65,7 +65,7 @@ describe('updateConditionChecks 觸發解鎖', () => {
   });
 });
 
-describe('deleteItem（主動放棄）', () => {
+describe('deleteItem（忍住不買）', () => {
   it('刪除冷靜區單品會播放煙火音效、+1 忍術點數，並寫入歷史記錄', async () => {
     const { result } = await renderHook(() => useItems());
 

@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { View, Text, FlatList, Pressable, StyleSheet } from 'react-native';
+import { View, Text, FlatList, Pressable, Alert, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { useItems } from '../../src/hooks/useItems';
@@ -18,6 +18,11 @@ export default function CoolingScreen() {
     }, [reload])
   );
 
+  const handleResist = (itemId: string) => {
+    Alert.alert('將贈送您一點忍術點數');
+    deleteItem(itemId);
+  };
+
   return (
     <View style={styles.container}>
       {coolingItems.length === 0 ? (
@@ -32,7 +37,7 @@ export default function CoolingScreen() {
               variant="cooling"
               accentColor={themeColor}
               onPress={() => router.push(`/item/${item.id}`)}
-              onDelete={() => deleteItem(item.id)}
+              onDelete={() => handleResist(item.id)}
             />
           )}
         />
