@@ -53,4 +53,20 @@ describe('TabsLayout screenOptions', () => {
     expect(capturedScreenOptions.tabBarStyle.height).toBe(70);
     expect(capturedScreenOptions.tabBarStyle.paddingBottom).toBe(20);
   });
+
+  it('頁首標題置中', async () => {
+    await render(<TabsLayout />);
+    expect(capturedScreenOptions.headerTitleAlign).toBe('center');
+  });
+
+  it('頁首背景綁定目前的主題色', async () => {
+    useAppStore.setState({ themeColor: '#8B3A42' });
+    await render(<TabsLayout />);
+    expect(capturedScreenOptions.headerStyle.backgroundColor).toBe('#8B3A42');
+  });
+
+  it('頁首文字（標題與返回鍵）為白色', async () => {
+    await render(<TabsLayout />);
+    expect(capturedScreenOptions.headerTintColor).toBe('#FFFFFF');
+  });
 });

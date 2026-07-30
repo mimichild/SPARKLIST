@@ -1,8 +1,10 @@
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react-native';
+import { StyleSheet } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import CoolingScreen from '../../../app/(tabs)/cooling';
 import * as storage from '../../services/storage';
 import * as itemService from '../../services/itemService';
+import { useAppStore } from '../../store/useAppStore';
 
 const mockPush = jest.fn();
 
@@ -36,7 +38,7 @@ describe('CoolingScreen', () => {
   it('沒有單品時顯示空狀態文字', async () => {
     await render(<CoolingScreen />);
     await waitFor(() => {
-      expect(screen.getByText('目前沒有正在冷靜的單品，按右上角新增一個吧！')).toBeTruthy();
+      expect(screen.getByText('目前沒有正在冷靜的單品，按右下角新增一個吧！')).toBeTruthy();
     });
   });
 
@@ -74,7 +76,7 @@ describe('CoolingScreen', () => {
   it('畫面重新取得焦點時會重新載入單品清單（例如從新增單品畫面返回）', async () => {
     await render(<CoolingScreen />);
     await waitFor(() => {
-      expect(screen.getByText('目前沒有正在冷靜的單品，按右上角新增一個吧！')).toBeTruthy();
+      expect(screen.getByText('目前沒有正在冷靜的單品，按右下角新增一個吧！')).toBeTruthy();
     });
 
     // Simulate another screen (e.g. /item/new) writing to storage while
@@ -116,5 +118,17 @@ describe('CoolingScreen', () => {
     await waitFor(() => {
       expect(screen.queryByText('要放棄的外套')).toBeNull();
     });
+  });
+
+  it('「新增單品」按鈕文字固定為白色，不受主題色明暗影響', async () => {
+    // 選一個亮色主題色，若還在用 getContrastColor 自動判斷對比色，
+    // 亮色底會算出深色文字，藉此確認文字色已改為寫死白色。
+    useAppStore.setState({ themeColor: '#f1aba7' });
+
+    await render(<CoolingScreen />);
+    await waitFor(() => expect(screen.getByText('新增單品')).toBeTruthy());
+
+    const label = screen.getByText('新增單品');
+    expect(StyleSheet.flatten(label.props.style).color).toBe('#FFFFFF');
   });
 });

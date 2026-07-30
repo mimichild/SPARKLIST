@@ -15,18 +15,20 @@ jest.mock('@react-navigation/native', () => ({
 }));
 
 describe('分頁骨架畫面', () => {
-  it('我的畫面會渲染標題', async () => {
+  // 標題文字現在只由 Tab 頁首（app/(tabs)/_layout.tsx 的 screenOptions.title）顯示，
+  // 畫面內容本身不應該再重複渲染一次同樣的標題文字。
+  it('我的畫面內容不會重複渲染「我的」標題', async () => {
     await render(<MeScreen />);
-    expect(screen.getByText('我的')).toBeTruthy();
+    expect(screen.queryByText('我的')).toBeNull();
   });
 
-  it('冷靜區畫面會渲染標題', async () => {
+  it('冷靜區畫面內容不會重複渲染「冷靜區」標題', async () => {
     await render(<CoolingScreen />);
-    expect(screen.getByText('冷靜區')).toBeTruthy();
+    expect(screen.queryByText('冷靜區')).toBeNull();
   });
 
-  it('解鎖區畫面會渲染標題', async () => {
+  it('解鎖區畫面內容不會重複渲染「解鎖區」標題', async () => {
     await render(<UnlockedScreen />);
-    expect(screen.getByText('解鎖區')).toBeTruthy();
+    expect(screen.queryByText('解鎖區')).toBeNull();
   });
 });
