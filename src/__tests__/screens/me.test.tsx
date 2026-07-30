@@ -80,6 +80,9 @@ describe('MeScreen', () => {
     await waitFor(() => expect(screen.getByText('編輯六項條件')).toBeTruthy());
     await fireEvent.press(screen.getByText('編輯六項條件'));
 
+    // 打開編輯時，預設顯示 6 項條件（尚未新增或刪除過）。
+    expect(screen.getAllByText('刪除')).toHaveLength(6);
+
     const firstInput = screen.getByDisplayValue(DEFAULT_CONDITION_LABELS[0]);
     await fireEvent.changeText(firstInput, '改過的條件文字');
 
@@ -132,6 +135,28 @@ describe('MeScreen', () => {
     await waitFor(() => {
       expect(useAppStore.getState().conditionLabels).toHaveLength(3);
     });
+  });
+
+  it('編輯條件時按下「取消」，不會儲存變更，且還原顯示原本的條件內容', async () => {
+    await render(<MeScreen />);
+
+    await fireEvent.press(screen.getByText('編輯六項條件'));
+
+    const firstInput = screen.getByDisplayValue(DEFAULT_CONDITION_LABELS[0]);
+    await fireEvent.changeText(firstInput, '不想儲存的文字');
+    await fireEvent.press(screen.getByText('＋ 新增條件'));
+
+    await fireEvent.press(screen.getByText('取消'));
+
+    await waitFor(() => {
+      expect(screen.queryByText('取消')).toBeNull();
+    });
+    expect(useAppStore.getState().conditionLabels).toEqual(DEFAULT_CONDITION_LABELS);
+
+    // 重新打開編輯，確認顯示的是原本未被覆蓋的條件內容。
+    await fireEvent.press(screen.getByText('編輯六項條件'));
+    expect(screen.getByDisplayValue(DEFAULT_CONDITION_LABELS[0])).toBeTruthy();
+    expect(screen.queryByDisplayValue('不想儲存的文字')).toBeNull();
   });
 
   it('可以選擇主題色', async () => {
