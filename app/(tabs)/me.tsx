@@ -48,6 +48,11 @@ export default function MeScreen() {
     setIsEditingConditions(false);
   };
 
+  const handleCancelConditions = () => {
+    setDraftLabels(conditionLabels);
+    setIsEditingConditions(false);
+  };
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <RankBadge points={ninjaPoints} rank={currentRank} accentColor={themeColor} />
@@ -108,9 +113,17 @@ export default function MeScreen() {
             </Pressable>
           ) : null}
 
-          <Pressable style={[styles.saveButton, { backgroundColor: themeColor }]} onPress={handleSaveConditions}>
-            <Text style={styles.saveButtonText}>儲存</Text>
-          </Pressable>
+          <View style={styles.conditionActionsRow}>
+            <Pressable style={styles.cancelButton} onPress={handleCancelConditions}>
+              <Text style={styles.cancelButtonText}>取消</Text>
+            </Pressable>
+            <Pressable
+              style={[styles.saveButton, { backgroundColor: themeColor }]}
+              onPress={handleSaveConditions}
+            >
+              <Text style={styles.saveButtonText}>儲存</Text>
+            </Pressable>
+          </View>
         </View>
       ) : null}
     </ScrollView>
@@ -164,11 +177,21 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.verticalSmall,
   },
   addConditionButtonText: { fontSize: TYPE_SCALE.small, color: COLORS.textPrimary },
-  saveButton: {
+  conditionActionsRow: { flexDirection: 'row', gap: 8, marginTop: SPACING.verticalSmall },
+  cancelButton: {
+    flex: 1,
     padding: SPACING.verticalMedium,
     borderRadius: RADIUS.pill,
     alignItems: 'center',
-    marginTop: SPACING.verticalSmall,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  cancelButtonText: { fontWeight: '600', fontSize: TYPE_SCALE.body, color: COLORS.textPrimary },
+  saveButton: {
+    flex: 1,
+    padding: SPACING.verticalMedium,
+    borderRadius: RADIUS.pill,
+    alignItems: 'center',
   },
   saveButtonText: { fontWeight: '600', fontSize: TYPE_SCALE.body, color: '#FFFFFF' },
 });
