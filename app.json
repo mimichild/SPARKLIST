@@ -10,7 +10,11 @@
     "android": {
       "package": "com.mimichild.sparklist",
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon-foreground.png",
+        "backgroundColor": "#F0ADB4"
+      }
     },
     "web": {
       "output": "static"
