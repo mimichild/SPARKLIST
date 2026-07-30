@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { View, Text, FlatList, Linking, StyleSheet } from 'react-native';
+import { View, Text, FlatList, Linking, Alert, StyleSheet } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useItems } from '../../src/hooks/useItems';
 import { useAppStore } from '../../src/store/useAppStore';
@@ -16,6 +16,11 @@ export default function UnlockedScreen() {
     }, [reload])
   );
 
+  const handleResist = (itemId: string) => {
+    Alert.alert('將贈送您一點忍術點數');
+    deleteItem(itemId);
+  };
+
   return (
     <View style={styles.container}>
       {unlockedItems.length === 0 ? (
@@ -30,7 +35,7 @@ export default function UnlockedScreen() {
               variant="unlocked"
               accentColor={themeColor}
               onPress={() => {}}
-              onDelete={() => deleteItem(item.id)}
+              onDelete={() => handleResist(item.id)}
               onMarkPurchased={() => markPurchased(item.id)}
               onOpenLink={item.url ? () => Linking.openURL(item.url as string) : undefined}
             />

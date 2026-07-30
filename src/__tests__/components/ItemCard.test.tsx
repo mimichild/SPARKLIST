@@ -88,7 +88,7 @@ describe('ItemCard - unlocked variant', () => {
     await fireEvent.press(screen.getByText('標記已購買'));
     expect(onMarkPurchased).toHaveBeenCalled();
 
-    await fireEvent.press(screen.getByText('刪除（不買了）'));
+    await fireEvent.press(screen.getByText('忍住不買'));
     expect(onDelete).toHaveBeenCalled();
   });
 });
