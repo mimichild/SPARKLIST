@@ -50,11 +50,19 @@ export function useItems() {
     await notificationService.scheduleReminders(newItem);
   }, [setItems]);
 
-  const updateConditionChecks = useCallback(async (itemId: string, conditionChecks: boolean[]) => {
-    const next = itemsRef.current.map((i) => (i.id === itemId ? { ...i, conditionChecks } : i));
-    await storage.saveItems(next);
-    await reload();
-  }, [reload]);
+  const updateItem = useCallback(
+    async (itemId: string, patch: Partial<Pick<Item, 'name' | 'price' | 'url' | 'note' | 'photoUri' | 'conditionChecks'>>) => {
+      const next = itemsRef.current.map((i) => (i.id === itemId ? { ...i, ...patch } : i));
+      await storage.saveItems(next);
+      await reload();
+    },
+    [reload]
+  );
+
+  const updateConditionChecks = useCallback(
+    (itemId: string, conditionChecks: boolean[]) => updateItem(itemId, { conditionChecks }),
+    [updateItem]
+  );
 
   const updateUnlockDate = useCallback(async (itemId: string, unlockDate: string) => {
     const next = itemsRef.current.map((i) => (i.id === itemId ? { ...i, unlockDate } : i));
@@ -96,6 +104,7 @@ export function useItems() {
     unlockedItems: items.filter((i) => i.status === 'unlocked'),
     reload,
     addItem,
+    updateItem,
     updateConditionChecks,
     updateUnlockDate,
     deleteItem,
