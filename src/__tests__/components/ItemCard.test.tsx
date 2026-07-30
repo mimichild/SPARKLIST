@@ -120,7 +120,7 @@ describe('ItemCard - cooling variant', () => {
 });
 
 describe('ItemCard - unlocked variant', () => {
-  it('顯示標記已購買與刪除兩個按鈕', async () => {
+  it('顯示已購買與忍住不買兩個按鈕', async () => {
     const onMarkPurchased = jest.fn();
     const onDelete = jest.fn();
     await render(
@@ -134,7 +134,7 @@ describe('ItemCard - unlocked variant', () => {
       />
     );
 
-    await fireEvent.press(screen.getByText('標記已購買'));
+    await fireEvent.press(screen.getByText('已購買'));
     expect(onMarkPurchased).toHaveBeenCalled();
 
     await fireEvent.press(screen.getByText('忍住不買'));

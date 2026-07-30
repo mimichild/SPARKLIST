@@ -125,6 +125,8 @@ export function useItems() {
     if (outcome === 'resisted') {
       audioService.playFireworks();
       await addNinjaPoint();
+    } else {
+      audioService.playApplause();
     }
   }, [setItems, addNinjaPoint]);
 

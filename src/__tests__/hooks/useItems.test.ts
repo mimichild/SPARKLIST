@@ -160,7 +160,7 @@ describe('deleteItem（忍住不買）', () => {
 });
 
 describe('markPurchased', () => {
-  it('標記已購買不會增加忍術點數，但會寫入歷史記錄', async () => {
+  it('標記已購買不會增加忍術點數，但會寫入歷史記錄，並播放拍手音效', async () => {
     const { result } = await renderHook(() => useItems());
 
     await act(async () => {
@@ -181,6 +181,7 @@ describe('markPurchased', () => {
 
     expect(result.current.items).toHaveLength(0);
     expect(useAppStore.getState().ninjaPoints).toBe(0);
+    expect(__mockPlayer.play).toHaveBeenCalled();
 
     const history = await storage.getHistory();
     expect(history[0].outcome).toBe('purchased');

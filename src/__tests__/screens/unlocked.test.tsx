@@ -47,15 +47,17 @@ describe('UnlockedScreen', () => {
     });
   });
 
-  it('顯示已解鎖單品，並可以標記已購買', async () => {
+  it('顯示已解鎖單品，按下「已購買」會提示恭喜畢業並移除該單品', async () => {
     await storage.saveItems([makeUnlockedItem()]);
 
     await render(<UnlockedScreen />);
     await waitFor(() => expect(screen.getByText('已解鎖外套')).toBeTruthy());
 
     await act(async () => {
-      await fireEvent.press(screen.getByText('標記已購買'));
+      await fireEvent.press(screen.getByText('已購買'));
     });
+
+    expect(Alert.alert).toHaveBeenCalledWith('恭喜畢業');
 
     await waitFor(() => {
       expect(screen.queryByText('已解鎖外套')).toBeNull();

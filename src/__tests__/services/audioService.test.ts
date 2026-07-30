@@ -17,4 +17,10 @@ describe('audioService', () => {
     expect(createAudioPlayer).toHaveBeenCalled();
     expect(__mockPlayer.play).toHaveBeenCalled();
   });
+
+  it('playApplause 會建立音訊播放器並呼叫 play', () => {
+    audioService.playApplause();
+    expect(createAudioPlayer).toHaveBeenCalled();
+    expect(__mockPlayer.play).toHaveBeenCalled();
+  });
 });
