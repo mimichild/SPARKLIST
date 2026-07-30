@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { Modal, View, Text, Pressable, Image, PanResponder, Dimensions, StyleSheet } from 'react-native';
+import { Modal, View, Text, Pressable, Image, Dimensions, StyleSheet } from 'react-native';
+import { GestureDetector, Gesture } from 'react-native-gesture-handler';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { computeCropRect, clampTranslate } from '../services/photoCropService';
 import { COLORS, RADIUS, SPACING, TYPE_SCALE } from '../constants/theme';
@@ -18,11 +19,6 @@ const MAX_SCALE = 4;
 
 function clampScale(value: number): number {
   return Math.min(Math.max(value, 1), MAX_SCALE);
-}
-
-function touchDistance(touches: readonly { pageX: number; pageY: number }[]): number {
-  const [a, b] = touches;
-  return Math.hypot(a.pageX - b.pageX, a.pageY - b.pageY);
 }
 
 // The viewport is always shaped at the source photo's own aspect ratio
@@ -55,64 +51,46 @@ export function PhotoAdjustModal({
   const { width: viewportWidth, height: viewportHeight } = computeViewportSize(sourceWidth, sourceHeight);
 
   const [transform, setTransform] = useState({ scale: 1, translateX: 0, translateY: 0 });
-  const prevTouchRef = useRef<{ x: number; y: number } | null>(null);
-  const prevPinchDistanceRef = useRef<number | null>(null);
+  // Snapshot of `transform` taken whenever a pan or pinch gesture (re)starts,
+  // so each gesture's deltas are applied relative to a fresh baseline
+  // instead of drifting from a stale one.
+  const gestureStartRef = useRef({ scale: 1, translateX: 0, translateY: 0 });
 
   useEffect(() => {
     if (visible) {
       setTransform({ scale: 1, translateX: 0, translateY: 0 });
-      prevTouchRef.current = null;
-      prevPinchDistanceRef.current = null;
+      gestureStartRef.current = { scale: 1, translateX: 0, translateY: 0 };
     }
   }, [visible, photoUri]);
 
-  const panResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: () => true,
-      onPanResponderMove: (evt) => {
-        const touches = evt.nativeEvent.touches;
-
-        if (touches.length >= 2) {
-          const distance = touchDistance(touches);
-          if (prevPinchDistanceRef.current != null) {
-            const factor = distance / prevPinchDistanceRef.current;
-            setTransform((prev) => {
-              const nextScale = clampScale(prev.scale * factor);
-              return {
-                scale: nextScale,
-                translateX: clampTranslate(prev.translateX, viewportWidth, nextScale),
-                translateY: clampTranslate(prev.translateY, viewportHeight, nextScale),
-              };
-            });
-          }
-          prevPinchDistanceRef.current = distance;
-          prevTouchRef.current = null;
-        } else if (touches.length === 1) {
-          const touch = touches[0];
-          if (prevTouchRef.current) {
-            const dx = touch.pageX - prevTouchRef.current.x;
-            const dy = touch.pageY - prevTouchRef.current.y;
-            setTransform((prev) => ({
-              scale: prev.scale,
-              translateX: clampTranslate(prev.translateX + dx, viewportWidth, prev.scale),
-              translateY: clampTranslate(prev.translateY + dy, viewportHeight, prev.scale),
-            }));
-          }
-          prevTouchRef.current = { x: touch.pageX, y: touch.pageY };
-          prevPinchDistanceRef.current = null;
-        }
-      },
-      onPanResponderRelease: () => {
-        prevTouchRef.current = null;
-        prevPinchDistanceRef.current = null;
-      },
-      onPanResponderTerminate: () => {
-        prevTouchRef.current = null;
-        prevPinchDistanceRef.current = null;
-      },
+  const panGesture = Gesture.Pan()
+    .onStart(() => {
+      gestureStartRef.current = transform;
     })
-  ).current;
+    .onUpdate((event) => {
+      const base = gestureStartRef.current;
+      setTransform((prev) => ({
+        scale: prev.scale,
+        translateX: clampTranslate(base.translateX + event.translationX, viewportWidth, prev.scale),
+        translateY: clampTranslate(base.translateY + event.translationY, viewportHeight, prev.scale),
+      }));
+    });
+
+  const pinchGesture = Gesture.Pinch()
+    .onStart(() => {
+      gestureStartRef.current = transform;
+    })
+    .onUpdate((event) => {
+      const base = gestureStartRef.current;
+      const nextScale = clampScale(base.scale * event.scale);
+      setTransform({
+        scale: nextScale,
+        translateX: clampTranslate(base.translateX, viewportWidth, nextScale),
+        translateY: clampTranslate(base.translateY, viewportHeight, nextScale),
+      });
+    });
+
+  const composedGesture = Gesture.Simultaneous(panGesture, pinchGesture);
 
   const handleConfirm = async () => {
     const cropRect = computeCropRect({
@@ -140,26 +118,27 @@ export function PhotoAdjustModal({
         <View style={styles.panel}>
           <Text style={styles.title}>調整照片</Text>
 
-          <View
-            testID="photo-adjust-viewport"
-            style={[styles.viewport, { width: viewportWidth, height: viewportHeight }]}
-            {...panResponder.panHandlers}
-          >
-            <Image
-              testID="photo-adjust-image"
-              source={{ uri: photoUri }}
-              style={[
-                { width: viewportWidth, height: viewportHeight },
-                {
-                  transform: [
-                    { translateX: transform.translateX },
-                    { translateY: transform.translateY },
-                    { scale: transform.scale },
-                  ],
-                },
-              ]}
-            />
-          </View>
+          <GestureDetector gesture={composedGesture}>
+            <View
+              testID="photo-adjust-viewport"
+              style={[styles.viewport, { width: viewportWidth, height: viewportHeight }]}
+            >
+              <Image
+                testID="photo-adjust-image"
+                source={{ uri: photoUri }}
+                style={[
+                  { width: viewportWidth, height: viewportHeight },
+                  {
+                    transform: [
+                      { translateX: transform.translateX },
+                      { translateY: transform.translateY },
+                      { scale: transform.scale },
+                    ],
+                  },
+                ]}
+              />
+            </View>
+          </GestureDetector>
 
           <Text style={styles.hint}>單指拖曳移動照片，雙指縮放大小</Text>
 

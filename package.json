@@ -16,6 +16,7 @@
     "jest-expo": "~54.0.17",
     "react": "19.1.0",
     "react-native": "0.81.5",
+    "react-native-gesture-handler": "~2.28.0",
     "react-native-safe-area-context": "~5.6.0",
     "react-native-screens": "~4.16.0",
     "zustand": "^5.0.14"
@@ -51,6 +52,9 @@
       "^expo-audio$": "<rootDir>/src/__mocks__/expo-audio.ts",
       "^@react-native-async-storage/async-storage$": "<rootDir>/src/__mocks__/async-storage.ts"
     },
+    "setupFiles": [
+      "<rootDir>/node_modules/react-native-gesture-handler/jestSetup.js"
+    ],
     "testMatch": [
       "<rootDir>/src/__tests__/**/*.test.(ts|tsx)"
     ],
