@@ -131,6 +131,16 @@ export function useItems() {
   const deleteItem = useCallback((itemId: string) => resolveItem(itemId, 'resisted'), [resolveItem]);
   const markPurchased = useCallback((itemId: string) => resolveItem(itemId, 'purchased'), [resolveItem]);
 
+  // Plain removal for a mistakenly-added item — unlike deleteItem
+  // ("忍住不買"), this doesn't log a history entry, award a ninja point, or
+  // play a sound, since the item was never actually resisted.
+  const removeItem = useCallback(async (itemId: string) => {
+    const next = itemsRef.current.filter((i) => i.id !== itemId);
+    setItems(next);
+    await storage.saveItems(next);
+    await notificationService.cancelReminders(itemId);
+  }, [setItems]);
+
   return {
     items,
     loaded,
@@ -143,6 +153,7 @@ export function useItems() {
     updateItem,
     updateConditionChecks,
     deleteItem,
+    removeItem,
     markPurchased,
   };
 }

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { View, Text, TextInput, Pressable, ScrollView, Image, StyleSheet } from 'react-native';
+import { View, Text, TextInput, Pressable, ScrollView, Image, Alert, StyleSheet } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { useItems } from '../../src/hooks/useItems';
@@ -13,7 +13,7 @@ import { COLORS, RADIUS, SPACING, TYPE_SCALE } from '../../src/constants/theme';
 export default function EditItemScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const { items, updateItem } = useItems();
+  const { items, updateItem, removeItem } = useItems();
   const { themeColor, conditionLabels } = useAppStore();
 
   const item = items.find((i) => i.id === id);
@@ -134,6 +134,20 @@ export default function EditItemScreen() {
     router.back();
   };
 
+  const handleDelete = () => {
+    Alert.alert('刪除單品', '確定要刪除這筆單品嗎？此動作無法復原。', [
+      { text: '取消', style: 'cancel' },
+      {
+        text: '刪除',
+        style: 'destructive',
+        onPress: async () => {
+          await removeItem(item.id);
+          router.back();
+        },
+      },
+    ]);
+  };
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
       {draftPhotoUri ? (
@@ -184,6 +198,9 @@ export default function EditItemScreen() {
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
       <View style={styles.actionsRow}>
+        <Pressable style={styles.deleteButton} onPress={handleDelete}>
+          <Text style={styles.deleteButtonText}>刪除</Text>
+        </Pressable>
         <Pressable style={styles.cancelButton} onPress={handleCancel}>
           <Text style={styles.cancelButtonText}>取消</Text>
         </Pressable>
@@ -241,6 +258,14 @@ const styles = StyleSheet.create({
   },
   error: { color: COLORS.error, marginTop: SPACING.verticalSmall },
   actionsRow: { flexDirection: 'row', gap: 8, marginTop: SPACING.verticalLarge },
+  deleteButton: {
+    flex: 1,
+    padding: SPACING.verticalMedium,
+    borderRadius: RADIUS.pill,
+    alignItems: 'center',
+    backgroundColor: '#FFE3E3',
+  },
+  deleteButtonText: { fontWeight: '600', fontSize: TYPE_SCALE.body, color: COLORS.error },
   cancelButton: {
     flex: 1,
     padding: SPACING.verticalMedium,

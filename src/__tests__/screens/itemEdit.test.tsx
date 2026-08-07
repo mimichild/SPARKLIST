@@ -1,5 +1,5 @@
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react-native';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 import EditItemScreen from '../../../app/item/[id]';
@@ -31,6 +31,7 @@ async function seedItem(overrides: Partial<Parameters<typeof itemService.createI
 beforeEach(async () => {
   await AsyncStorage.clear();
   jest.clearAllMocks();
+  jest.spyOn(Alert, 'alert').mockImplementation(() => {});
 });
 
 describe('EditItemScreen', () => {
@@ -269,6 +270,47 @@ describe('EditItemScreen', () => {
 
     const items = await storage.getItems();
     expect(items[0].unlockDate).toBe('2026-08-15T00:00:00.000Z');
+  });
+
+  it('按下「刪除」會先跳出確認對話框，未確認前不會刪除單品', async () => {
+    await seedItem();
+    await render(<EditItemScreen />);
+
+    await waitFor(() => expect(screen.getByDisplayValue('編輯測試外套')).toBeTruthy());
+
+    await fireEvent.press(screen.getByText('刪除'));
+
+    expect(Alert.alert).toHaveBeenCalledWith(
+      '刪除單品',
+      expect.any(String),
+      expect.any(Array)
+    );
+    const items = await storage.getItems();
+    expect(items).toHaveLength(1);
+    expect(mockBack).not.toHaveBeenCalled();
+  });
+
+  it('確認對話框按下「刪除」後，單品會被移除且不留下歷史記錄，並返回上一頁', async () => {
+    const seeded = await seedItem();
+    (Alert.alert as jest.Mock).mockImplementation((_title, _message, buttons) => {
+      const destructive = buttons.find((b: { style?: string }) => b.style === 'destructive');
+      destructive?.onPress?.();
+    });
+
+    await render(<EditItemScreen />);
+    await waitFor(() => expect(screen.getByDisplayValue('編輯測試外套')).toBeTruthy());
+
+    await act(async () => {
+      await fireEvent.press(screen.getByText('刪除'));
+    });
+
+    await waitFor(async () => {
+      const items = await storage.getItems();
+      expect(items.find((i) => i.id === seeded.id)).toBeUndefined();
+    });
+    expect(mockBack).toHaveBeenCalled();
+    const history = await storage.getHistory();
+    expect(history).toHaveLength(0);
   });
 
   it('找不到對應單品時顯示提示文字', async () => {

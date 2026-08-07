@@ -7,6 +7,12 @@ import * as itemService from '../../services/itemService';
 
 jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
 
+const mockPush = jest.fn();
+
+jest.mock('expo-router', () => ({
+  useRouter: () => ({ push: mockPush }),
+}));
+
 // See cooling.test.tsx for why @react-navigation/native is mocked this way:
 // the real useFocusEffect needs a NavigationContainer that isn't present in
 // these unit-rendered screens, so we run the callback once on mount and
@@ -72,6 +78,18 @@ describe('UnlockedScreen', () => {
     await waitFor(() => {
       expect(screen.queryByText('已解鎖外套')).toBeNull();
     });
+  });
+
+  it('點擊已解鎖單品會導向該單品的編輯畫面，與冷靜區相同', async () => {
+    const item = makeUnlockedItem();
+    await storage.saveItems([item]);
+
+    await render(<UnlockedScreen />);
+    await waitFor(() => expect(screen.getByText('已解鎖外套')).toBeTruthy());
+
+    await fireEvent.press(screen.getByText('已解鎖外套'));
+
+    expect(mockPush).toHaveBeenCalledWith(`/item/${item.id}`);
   });
 
   it('畫面重新取得焦點時會重新載入單品清單（例如條件解鎖後從詳情頁返回）', async () => {
