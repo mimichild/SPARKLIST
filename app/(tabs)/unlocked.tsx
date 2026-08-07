@@ -1,5 +1,6 @@
 import { useCallback, useLayoutEffect, useState } from 'react';
 import { View, Text, TextInput, FlatList, Pressable, Linking, Alert, StyleSheet } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useItems } from '../../src/hooks/useItems';
 import { useAppStore } from '../../src/store/useAppStore';
@@ -7,6 +8,7 @@ import { ItemCard } from '../../src/components/ItemCard';
 import { COLORS, RADIUS, SPACING, TYPE_SCALE } from '../../src/constants/theme';
 
 export default function UnlockedScreen() {
+  const router = useRouter();
   const navigation = useNavigation();
   const { unlockedItems, deleteItem, markPurchased, reload } = useItems();
   const themeColor = useAppStore((s) => s.themeColor);
@@ -71,7 +73,7 @@ export default function UnlockedScreen() {
               item={item}
               variant="unlocked"
               accentColor={themeColor}
-              onPress={() => {}}
+              onPress={() => router.push(`/item/${item.id}`)}
               onDelete={() => handleResist(item.id)}
               onMarkPurchased={() => handlePurchased(item.id)}
               onOpenLink={item.url ? () => Linking.openURL(item.url as string) : undefined}

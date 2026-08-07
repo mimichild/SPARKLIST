@@ -161,6 +161,36 @@ describe('deleteItem（忍住不買）', () => {
   });
 });
 
+describe('removeItem（誤新增時的刪除，非忍住不買）', () => {
+  it('直接移除單品，不寫入歷史記錄、不加忍術點數、不播放音效', async () => {
+    const { result } = await renderHook(() => useItems());
+
+    await act(async () => {
+      await result.current.addItem({
+        name: '誤加的外套',
+        photoUri: 'mock://photo.jpg',
+        price: 1000,
+        unlockDate: '2099-01-01T00:00:00.000Z',
+      });
+    });
+
+    const itemId = result.current.coolingItems[0].id;
+    jest.clearAllMocks();
+
+    await act(async () => {
+      await result.current.removeItem(itemId);
+    });
+
+    expect(result.current.items).toHaveLength(0);
+    expect(__mockPlayer.play).not.toHaveBeenCalled();
+    expect(useAppStore.getState().ninjaPoints).toBe(0);
+
+    const history = await storage.getHistory();
+    expect(history).toHaveLength(0);
+    expect(Notifications.cancelScheduledNotificationAsync).toHaveBeenCalled();
+  });
+});
+
 describe('markPurchased', () => {
   it('標記已購買不會增加忍術點數，但會寫入歷史記錄，並播放拍手音效', async () => {
     const { result } = await renderHook(() => useItems());
