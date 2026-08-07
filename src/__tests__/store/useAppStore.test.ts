@@ -12,6 +12,7 @@ beforeEach(async () => {
     currentRank: '新使用者',
     conditionLabels: DEFAULT_CONDITION_LABELS,
     themeColor: DEFAULT_THEME_COLOR,
+    soundEnabled: true,
     hydrated: false,
   });
 });
@@ -23,6 +24,7 @@ describe('useAppStore 初始值', () => {
     expect(state.currentRank).toBe('新使用者');
     expect(state.conditionLabels).toEqual(DEFAULT_CONDITION_LABELS);
     expect(state.themeColor).toBe(DEFAULT_THEME_COLOR);
+    expect(state.soundEnabled).toBe(true);
   });
 });
 
@@ -53,6 +55,20 @@ describe('hydrate', () => {
 
     expect(useAppStore.getState().ninjaPoints).toBe(0);
     expect(useAppStore.getState().hydrated).toBe(true);
+  });
+
+  it('舊資料沒有 soundEnabled 欄位時，預設視為音效開啟', async () => {
+    await storage.saveAppState({
+      ninjaPoints: 5,
+      conditionLabels: DEFAULT_CONDITION_LABELS,
+      themeColor: DEFAULT_THEME_COLOR,
+    });
+
+    await act(async () => {
+      await useAppStore.getState().hydrate();
+    });
+
+    expect(useAppStore.getState().soundEnabled).toBe(true);
   });
 });
 
@@ -87,5 +103,13 @@ describe('setConditionLabels / setThemeColor', () => {
     });
     expect(useAppStore.getState().themeColor).toBe('#69DB7C');
     expect((await storage.getAppState())?.themeColor).toBe('#69DB7C');
+  });
+
+  it('setSoundEnabled 會更新 state 並持久化', async () => {
+    await act(async () => {
+      await useAppStore.getState().setSoundEnabled(false);
+    });
+    expect(useAppStore.getState().soundEnabled).toBe(false);
+    expect((await storage.getAppState())?.soundEnabled).toBe(false);
   });
 });

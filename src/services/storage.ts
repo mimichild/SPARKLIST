@@ -9,6 +9,9 @@ export interface PersistedAppState {
   ninjaPoints: number;
   conditionLabels: string[];
   themeColor: string;
+  // Optional so state persisted before this setting existed still parses;
+  // callers should treat a missing value as sound enabled (the prior behavior).
+  soundEnabled?: boolean;
 }
 
 export async function getItems(): Promise<Item[]> {

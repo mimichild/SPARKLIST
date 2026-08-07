@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { View, Text, TextInput, Pressable, ScrollView, Alert, StyleSheet } from 'react-native';
+import { View, Text, TextInput, Pressable, ScrollView, Switch, Alert, StyleSheet } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAppStore } from '../../src/store/useAppStore';
 import { RankBadge } from '../../src/components/RankBadge';
@@ -17,8 +17,17 @@ import { MIN_CONDITIONS_TO_UNLOCK, MAX_CONDITION_COUNT } from '../../src/constan
 import type { HistoryStats } from '../../src/types/item';
 
 export default function MeScreen() {
-  const { ninjaPoints, currentRank, conditionLabels, themeColor, hydrate, setConditionLabels, setThemeColor } =
-    useAppStore();
+  const {
+    ninjaPoints,
+    currentRank,
+    conditionLabels,
+    themeColor,
+    soundEnabled,
+    hydrate,
+    setConditionLabels,
+    setThemeColor,
+    setSoundEnabled,
+  } = useAppStore();
   const [stats, setStats] = useState<HistoryStats>({ resistedCount: 0, savedAmount: 0 });
   const [draftLabels, setDraftLabels] = useState(conditionLabels);
   // Tracks whether draftLabels has unsaved local edits, so the sync effect
@@ -98,6 +107,17 @@ export default function MeScreen() {
         ))}
       </View>
 
+      <Text style={styles.sectionTitle}>音效</Text>
+      <View style={styles.soundRow}>
+        <Text style={styles.soundLabel}>關閉音效</Text>
+        <Switch
+          testID="mute-sound-switch"
+          value={!soundEnabled}
+          onValueChange={(muted) => setSoundEnabled(!muted)}
+          trackColor={{ true: themeColor }}
+        />
+      </View>
+
       <Text style={styles.sectionTitle}>編輯條件</Text>
 
       <View>
@@ -158,6 +178,17 @@ const styles = StyleSheet.create({
     color: COLORS.textPrimary,
   },
   themeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  soundRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: COLORS.card,
+    borderRadius: RADIUS.card,
+    paddingVertical: SPACING.verticalMedium,
+    paddingHorizontal: SPACING.horizontal,
+    ...SHADOW.card,
+  },
+  soundLabel: { fontSize: TYPE_SCALE.body, color: COLORS.textPrimary },
   themeSwatch: { width: 32, height: 32, borderRadius: 16 },
   themeSwatchSelected: { borderColor: '#FFFFFF', borderWidth: 3 },
   conditionRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: SPACING.verticalSmall },

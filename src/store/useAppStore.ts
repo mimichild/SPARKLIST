@@ -10,11 +10,13 @@ interface AppState {
   currentRank: RankName;
   conditionLabels: string[];
   themeColor: string;
+  soundEnabled: boolean;
   hydrated: boolean;
   hydrate: () => Promise<void>;
   addNinjaPoint: () => Promise<void>;
   setConditionLabels: (labels: string[]) => Promise<void>;
   setThemeColor: (color: string) => Promise<void>;
+  setSoundEnabled: (enabled: boolean) => Promise<void>;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -22,6 +24,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   currentRank: computeRank(0),
   conditionLabels: DEFAULT_CONDITION_LABELS,
   themeColor: DEFAULT_THEME_COLOR,
+  soundEnabled: true,
   hydrated: false,
 
   hydrate: async () => {
@@ -32,6 +35,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         currentRank: computeRank(persisted.ninjaPoints),
         conditionLabels: persisted.conditionLabels,
         themeColor: persisted.themeColor,
+        soundEnabled: persisted.soundEnabled ?? true,
         hydrated: true,
       });
     } else {
@@ -46,6 +50,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       ninjaPoints: nextPoints,
       conditionLabels: get().conditionLabels,
       themeColor: get().themeColor,
+      soundEnabled: get().soundEnabled,
     });
   },
 
@@ -55,6 +60,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       ninjaPoints: get().ninjaPoints,
       conditionLabels: labels,
       themeColor: get().themeColor,
+      soundEnabled: get().soundEnabled,
     });
   },
 
@@ -64,6 +70,17 @@ export const useAppStore = create<AppState>((set, get) => ({
       ninjaPoints: get().ninjaPoints,
       conditionLabels: get().conditionLabels,
       themeColor: color,
+      soundEnabled: get().soundEnabled,
+    });
+  },
+
+  setSoundEnabled: async (enabled: boolean) => {
+    set({ soundEnabled: enabled });
+    await storage.saveAppState({
+      ninjaPoints: get().ninjaPoints,
+      conditionLabels: get().conditionLabels,
+      themeColor: get().themeColor,
+      soundEnabled: enabled,
     });
   },
 }));
