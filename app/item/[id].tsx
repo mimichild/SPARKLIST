@@ -7,6 +7,7 @@ import { useAppStore } from '../../src/store/useAppStore';
 import { ConditionChecklist } from '../../src/components/ConditionChecklist';
 import { PhotoAdjustModal } from '../../src/components/PhotoAdjustModal';
 import { UnlockDatePicker } from '../../src/components/UnlockDatePicker';
+import { persistPhotoAsync } from '../../src/services/photoStorageService';
 import { COLORS, RADIUS, SPACING, TYPE_SCALE } from '../../src/constants/theme';
 
 export default function EditItemScreen() {
@@ -62,19 +63,19 @@ export default function EditItemScreen() {
     setDraftChecks((prev) => prev.map((v, i) => (i === index ? !v : v)));
   };
 
-  const applyPickedAsset = (asset: ImagePicker.ImagePickerAsset) => {
+  const applyPickedAsset = async (asset: ImagePicker.ImagePickerAsset) => {
     if (asset.width && asset.height) {
       // Route through the adjust step so the user can pinch/pan before
       // it's confirmed as the item's photo.
       setPendingAsset({ uri: asset.uri, width: asset.width, height: asset.height });
     } else {
-      setDraftPhotoUri(asset.uri);
+      setDraftPhotoUri(await persistPhotoAsync(asset.uri));
       setDraftPhotoAspectRatio(undefined);
     }
   };
 
-  const handleAdjustConfirm = ({ uri, aspectRatio }: { uri: string; aspectRatio: number }) => {
-    setDraftPhotoUri(uri);
+  const handleAdjustConfirm = async ({ uri, aspectRatio }: { uri: string; aspectRatio: number }) => {
+    setDraftPhotoUri(await persistPhotoAsync(uri));
     setDraftPhotoAspectRatio(aspectRatio);
     setPendingAsset(null);
   };
@@ -88,7 +89,7 @@ export default function EditItemScreen() {
     if (permission.status !== 'granted') return;
     const result = await ImagePicker.launchCameraAsync({ quality: 0.7 });
     if (!result.canceled && result.assets[0]) {
-      applyPickedAsset(result.assets[0]);
+      await applyPickedAsset(result.assets[0]);
     }
   };
 
@@ -100,7 +101,7 @@ export default function EditItemScreen() {
       quality: 0.7,
     });
     if (!result.canceled && result.assets[0]) {
-      applyPickedAsset(result.assets[0]);
+      await applyPickedAsset(result.assets[0]);
     }
   };
 
