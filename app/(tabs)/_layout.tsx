@@ -25,6 +25,12 @@ export default function TabsLayout() {
           tabBarActiveTintColor: themeColor,
           tabBarInactiveTintColor: '#999',
           tabBarIcon: () => null,
+          // The tab bar always reserves vertical space for the icon slot,
+          // even when tabBarIcon renders nothing — collapsing it to 0 and
+          // centering the item is what actually centers the label, since
+          // otherwise the label sits below that invisible reserved space.
+          tabBarIconStyle: { width: 0, height: 0 },
+          tabBarItemStyle: { justifyContent: 'center' },
           tabBarLabelStyle: { fontSize: TAB_BAR_LABEL_FONT_SIZE },
           tabBarStyle: {
             backgroundColor: COLORS.card,

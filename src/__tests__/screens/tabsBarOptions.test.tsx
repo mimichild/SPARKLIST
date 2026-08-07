@@ -65,6 +65,14 @@ describe('TabsLayout screenOptions', () => {
     expect(capturedScreenOptions.tabBarIcon()).toBeNull();
   });
 
+  it('icon 佔位空間收為 0，且分頁項目垂直置中，讓標籤文字不會偏低', async () => {
+    await render(<TabsLayout />);
+    expect(capturedScreenOptions.tabBarIconStyle).toEqual({ width: 0, height: 0 });
+    expect(capturedScreenOptions.tabBarItemStyle).toEqual(
+      expect.objectContaining({ justifyContent: 'center' })
+    );
+  });
+
   it('tab bar 高度依安全區動態調整（base 50 + insets.bottom）', async () => {
     await render(<TabsLayout />);
     expect(capturedScreenOptions.tabBarStyle.height).toBe(70);
