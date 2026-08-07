@@ -29,6 +29,7 @@ beforeEach(async () => {
     currentRank: '新使用者',
     conditionLabels: DEFAULT_CONDITION_LABELS,
     themeColor: DEFAULT_THEME_COLOR,
+    soundEnabled: true,
     hydrated: false,
   });
   jest.spyOn(Alert, 'alert').mockImplementation(() => {});
@@ -150,6 +151,26 @@ describe('MeScreen', () => {
     });
     expect(useAppStore.getState().conditionLabels).toEqual(DEFAULT_CONDITION_LABELS);
     expect(Alert.alert).toHaveBeenCalledWith('已取消，條件內容恢復原狀');
+  });
+
+  it('預設音效為開啟，「關閉音效」開關預設為關', async () => {
+    await render(<MeScreen />);
+    await waitFor(() => {
+      expect(screen.getByTestId('mute-sound-switch').props.value).toBe(false);
+    });
+  });
+
+  it('打開「關閉音效」開關會關閉音效並持久化', async () => {
+    await render(<MeScreen />);
+
+    await act(async () => {
+      await fireEvent(screen.getByTestId('mute-sound-switch'), 'valueChange', true);
+    });
+
+    await waitFor(() => {
+      expect(useAppStore.getState().soundEnabled).toBe(false);
+    });
+    expect((await storage.getAppState())?.soundEnabled).toBe(false);
   });
 
   it('可以選擇主題色', async () => {
