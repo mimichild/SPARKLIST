@@ -12,6 +12,7 @@ export const copyAsync = jest.fn().mockResolvedValue(undefined);
 export const readAsStringAsync = jest.fn().mockResolvedValue('');
 export const writeAsStringAsync = jest.fn().mockResolvedValue(undefined);
 export const deleteAsync = jest.fn().mockResolvedValue(undefined);
+export const readDirectoryAsync = jest.fn().mockResolvedValue([]);
 
 export const StorageAccessFramework = {
   requestDirectoryPermissionsAsync: jest

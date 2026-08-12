@@ -1,4 +1,5 @@
 import * as FileSystem from 'expo-file-system/legacy';
+import * as ImageManipulator from 'expo-image-manipulator';
 import * as storage from './storage';
 import type { PersistedAppState } from './storage';
 import { persistPhotoFromBase64Async } from './photoStorageService';
@@ -16,9 +17,23 @@ export interface BackupPayload {
   history: HistoryLogEntry[];
 }
 
+export interface BuildBackupPayloadResult {
+  payload: BackupPayload;
+  // 舊資料裡有些單品的 photoUri 指向已經不存在的檔案（歷史 bug，已修，但舊
+  // 資料可能還留著壞路徑）。匯出時遇到讀不到的照片不會整包匯出失敗，只會
+  // 略過該筆的照片內容，這裡回報略過張數讓 UI 可以提示使用者。
+  skippedPhotoCount: number;
+}
+
+// 匯出用的照片會先縮圖壓縮（寬度 1280、JPEG 品質 0.7）再轉 base64，避免原始
+// 相機解析度的照片在一次匯出多筆時把整個 App 記憶體用量推到被系統關閉。
+// 只影響匯出檔內的照片副本，不會覆寫或動到本機正式使用的原始照片檔案。
+const EXPORT_PHOTO_MAX_WIDTH = 1280;
+const EXPORT_PHOTO_COMPRESS_QUALITY = 0.7;
+
 export async function buildBackupPayload(
   onProgress?: (current: number, total: number) => void
-): Promise<BackupPayload> {
+): Promise<BuildBackupPayloadResult> {
   const [items, history, appState] = await Promise.all([
     storage.getItems(),
     storage.getHistory(),
@@ -27,22 +42,38 @@ export async function buildBackupPayload(
 
   const total = items.length;
   const backupItems: BackupItem[] = [];
+  let skippedPhotoCount = 0;
 
   for (let i = 0; i < items.length; i += 1) {
     const { photoUri, ...rest } = items[i];
-    const photoBase64 = await FileSystem.readAsStringAsync(photoUri, {
-      encoding: FileSystem.EncodingType.Base64,
-    });
+    let photoBase64 = '';
+    try {
+      const manipulated = await ImageManipulator.manipulateAsync(
+        photoUri,
+        [{ resize: { width: EXPORT_PHOTO_MAX_WIDTH } }],
+        { compress: EXPORT_PHOTO_COMPRESS_QUALITY, format: ImageManipulator.SaveFormat.JPEG }
+      );
+      photoBase64 = await FileSystem.readAsStringAsync(manipulated.uri, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+    } catch {
+      // 照片檔案遺失或縮圖失敗：不中斷整個匯出，該筆照片以空字串代替。
+      skippedPhotoCount += 1;
+      photoBase64 = '';
+    }
     backupItems.push({ ...rest, photoBase64 });
     onProgress?.(i + 1, total);
   }
 
   return {
-    schemaVersion: BACKUP_SCHEMA_VERSION,
-    exportedAt: new Date().toISOString(),
-    appState,
-    items: backupItems,
-    history,
+    payload: {
+      schemaVersion: BACKUP_SCHEMA_VERSION,
+      exportedAt: new Date().toISOString(),
+      appState,
+      items: backupItems,
+      history,
+    },
+    skippedPhotoCount,
   };
 }
 
@@ -120,7 +151,10 @@ export async function applyBackupPayload(
 
   for (let i = 0; i < payload.items.length; i += 1) {
     const { photoBase64, ...rest } = payload.items[i];
-    const photoUri = await persistPhotoFromBase64Async(photoBase64);
+    // 空字串代表匯出時該筆照片已遺失（見 buildBackupPayload 的
+    // skippedPhotoCount），不能寫成一個內容是空字串的「照片」檔案，
+    // 直接給空字串 photoUri（沿用現有 UI 對缺照片的容忍度）。
+    const photoUri = photoBase64 ? await persistPhotoFromBase64Async(photoBase64) : '';
     restoredItems.push({ ...rest, photoUri });
     onProgress?.(i + 1, total);
   }

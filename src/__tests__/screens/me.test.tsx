@@ -42,16 +42,24 @@ beforeEach(async () => {
   });
   jest.spyOn(Alert, 'alert').mockImplementation(() => {});
   mockedBackupService.buildBackupPayload.mockResolvedValue({
-    schemaVersion: 1,
-    exportedAt: '2026-08-12T00:00:00.000Z',
-    appState: null,
-    items: [],
-    history: [],
+    payload: {
+      schemaVersion: 1,
+      exportedAt: '2026-08-12T00:00:00.000Z',
+      appState: null,
+      items: [],
+      history: [],
+    },
+    skippedPhotoCount: 0,
   });
   mockedBackupService.buildBackupFilename.mockReturnValue('SPARKLIST-備份-20260812-0000.json');
   mockedBackupService.applyBackupPayload.mockResolvedValue({ importedItemCount: 0 });
+  mockedBackupFileService.cleanupStaleBackupTempFiles.mockResolvedValue(undefined);
   mockedBackupFileService.shareBackupFile.mockResolvedValue(undefined);
-  mockedBackupFileService.saveBackupToFolder.mockResolvedValue({ folderDisplayName: 'Download' });
+  mockedBackupFileService.requestBackupFolder.mockResolvedValue({
+    directoryUri: 'mock://tree/primary:Download',
+    folderDisplayName: 'Download',
+  });
+  mockedBackupFileService.writeBackupToFolder.mockResolvedValue(undefined);
   mockedBackupFileService.pickBackupFile.mockResolvedValue(null);
 });
 
@@ -272,7 +280,49 @@ describe('MeScreen', () => {
     expect(Alert.alert).toHaveBeenCalledWith('已透過分享完成匯出');
   });
 
-  it('按下匯出資料後選擇「存到本機」，完成後提示儲存位置', async () => {
+  it('匯出（分享）時有照片遺失，完成提示會附註略過的照片張數', async () => {
+    mockedBackupService.buildBackupPayload.mockResolvedValueOnce({
+      payload: { schemaVersion: 1, exportedAt: '2026-08-12T00:00:00.000Z', appState: null, items: [], history: [] },
+      skippedPhotoCount: 2,
+    });
+    await render(<MeScreen />);
+
+    (Alert.alert as jest.Mock).mockImplementation((title, _message, buttons) => {
+      if (title === '匯出資料') {
+        buttons?.find((b: { text: string }) => b.text === '分享')?.onPress?.();
+      }
+    });
+
+    await act(async () => {
+      await fireEvent.press(screen.getByTestId('export-data-button'));
+    });
+
+    await waitFor(() => {
+      expect(mockedBackupFileService.shareBackupFile).toHaveBeenCalled();
+    });
+    expect(Alert.alert).toHaveBeenCalledWith(expect.stringContaining('已透過分享完成匯出'));
+    expect(Alert.alert).toHaveBeenCalledWith(expect.stringContaining('2 張照片遺失'));
+  });
+
+  it('按下匯出資料時會先清除舊的暫存備份檔（避免上次分享用的暫存檔一直堆積）', async () => {
+    await render(<MeScreen />);
+
+    (Alert.alert as jest.Mock).mockImplementation((title, _message, buttons) => {
+      if (title === '匯出資料') {
+        buttons?.find((b: { text: string }) => b.text === '分享')?.onPress?.();
+      }
+    });
+
+    await act(async () => {
+      await fireEvent.press(screen.getByTestId('export-data-button'));
+    });
+
+    await waitFor(() => {
+      expect(mockedBackupFileService.cleanupStaleBackupTempFiles).toHaveBeenCalled();
+    });
+  });
+
+  it('按下匯出資料後選擇「存到本機」，會先跳出資料夾選擇器，選定後才開始組資料，完成後提示儲存位置', async () => {
     await render(<MeScreen />);
 
     (Alert.alert as jest.Mock).mockImplementation((title, _message, buttons) => {
@@ -288,10 +338,24 @@ describe('MeScreen', () => {
     await waitFor(() => {
       expect(Alert.alert).toHaveBeenCalledWith('已匯出', expect.stringContaining('Download'));
     });
+    expect(mockedBackupFileService.requestBackupFolder).toHaveBeenCalled();
+    expect(mockedBackupFileService.writeBackupToFolder).toHaveBeenCalledWith(
+      'mock://tree/primary:Download',
+      expect.any(String),
+      'SPARKLIST-備份-20260812-0000.json'
+    );
+
+    // 資料夾選擇必須發生在組出備份資料（buildBackupPayload）之前。
+    const folderOrder = mockedBackupFileService.requestBackupFolder.mock.invocationCallOrder[0];
+    const buildOrder = mockedBackupService.buildBackupPayload.mock.invocationCallOrder[0];
+    expect(folderOrder).toBeLessThan(buildOrder);
   });
 
-  it('存到本機時使用者取消資料夾選擇，不顯示完成提示', async () => {
-    mockedBackupFileService.saveBackupToFolder.mockResolvedValueOnce(null);
+  it('匯出（存到本機）時有照片遺失，完成提示會附註略過的照片張數', async () => {
+    mockedBackupService.buildBackupPayload.mockResolvedValueOnce({
+      payload: { schemaVersion: 1, exportedAt: '2026-08-12T00:00:00.000Z', appState: null, items: [], history: [] },
+      skippedPhotoCount: 1,
+    });
     await render(<MeScreen />);
 
     (Alert.alert as jest.Mock).mockImplementation((title, _message, buttons) => {
@@ -305,9 +369,32 @@ describe('MeScreen', () => {
     });
 
     await waitFor(() => {
-      expect(mockedBackupFileService.saveBackupToFolder).toHaveBeenCalled();
+      expect(Alert.alert).toHaveBeenCalledWith('已匯出', expect.stringContaining('Download'));
     });
+    expect(Alert.alert).toHaveBeenCalledWith('已匯出', expect.stringContaining('1 張照片遺失'));
+  });
+
+  it('存到本機時使用者取消資料夾選擇，不顯示完成提示、不顯示錯誤提示、不會去組備份資料（沒有進度條）', async () => {
+    mockedBackupFileService.requestBackupFolder.mockResolvedValueOnce(null);
+    await render(<MeScreen />);
+
+    (Alert.alert as jest.Mock).mockImplementation((title, _message, buttons) => {
+      if (title === '匯出資料') {
+        buttons?.find((b: { text: string }) => b.text === '存到本機')?.onPress?.();
+      }
+    });
+
+    await act(async () => {
+      await fireEvent.press(screen.getByTestId('export-data-button'));
+    });
+
+    await waitFor(() => {
+      expect(mockedBackupFileService.requestBackupFolder).toHaveBeenCalled();
+    });
+    expect(mockedBackupService.buildBackupPayload).not.toHaveBeenCalled();
+    expect(mockedBackupFileService.writeBackupToFolder).not.toHaveBeenCalled();
     expect(Alert.alert).not.toHaveBeenCalledWith('已匯出', expect.anything());
+    expect(Alert.alert).not.toHaveBeenCalledWith('匯出失敗', expect.anything());
   });
 
   it('本機沒有資料時，按下匯入資料不會詢問覆蓋或合併，直接匯入', async () => {

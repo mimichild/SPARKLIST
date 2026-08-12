@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system/legacy';
+import * as ImageManipulator from 'expo-image-manipulator';
 import * as storage from '../../services/storage';
 import {
   buildBackupPayload,
@@ -27,6 +28,11 @@ beforeEach(async () => {
   await AsyncStorage.clear();
   jest.clearAllMocks();
   (FileSystem.readAsStringAsync as jest.Mock).mockResolvedValue('base64-photo-content');
+  (ImageManipulator.manipulateAsync as jest.Mock).mockResolvedValue({
+    uri: 'mock://resized-photo.jpg',
+    width: 1280,
+    height: 960,
+  });
 });
 
 describe('backupService.buildBackupPayload', () => {
@@ -42,7 +48,7 @@ describe('backupService.buildBackupPayload', () => {
       soundEnabled: true,
     });
 
-    const payload = await buildBackupPayload();
+    const { payload, skippedPhotoCount } = await buildBackupPayload();
 
     expect(payload.schemaVersion).toBe(BACKUP_SCHEMA_VERSION);
     expect(payload.items).toEqual([
@@ -65,13 +71,11 @@ describe('backupService.buildBackupPayload', () => {
       themeColor: '#EAAFB3',
       soundEnabled: true,
     });
-    expect(FileSystem.readAsStringAsync).toHaveBeenCalledWith(sampleItem.photoUri, {
-      encoding: FileSystem.EncodingType.Base64,
-    });
+    expect(skippedPhotoCount).toBe(0);
   });
 
   it('沒有單品時 items 為空陣列，appState 為 null', async () => {
-    const payload = await buildBackupPayload();
+    const { payload } = await buildBackupPayload();
 
     expect(payload.items).toEqual([]);
     expect(payload.appState).toBeNull();
@@ -85,6 +89,54 @@ describe('backupService.buildBackupPayload', () => {
 
     expect(onProgress).toHaveBeenNthCalledWith(1, 1, 2);
     expect(onProgress).toHaveBeenNthCalledWith(2, 2, 2);
+  });
+
+  it('讀取照片前會先用 ImageManipulator 縮圖壓縮，並讀取縮圖後檔案的 base64（不是原始 photoUri）', async () => {
+    await storage.saveItems([sampleItem]);
+
+    await buildBackupPayload();
+
+    expect(ImageManipulator.manipulateAsync).toHaveBeenCalledWith(
+      sampleItem.photoUri,
+      [{ resize: { width: 1280 } }],
+      { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
+    );
+    expect(FileSystem.readAsStringAsync).toHaveBeenCalledWith('mock://resized-photo.jpg', {
+      encoding: FileSystem.EncodingType.Base64,
+    });
+    expect(FileSystem.readAsStringAsync).not.toHaveBeenCalledWith(sampleItem.photoUri, expect.anything());
+
+    // manipulateAsync 必須發生在 readAsStringAsync 之前（用縮圖結果去讀，不是原圖）。
+    const manipulateOrder = (ImageManipulator.manipulateAsync as jest.Mock).mock.invocationCallOrder[0];
+    const readOrder = (FileSystem.readAsStringAsync as jest.Mock).mock.invocationCallOrder[0];
+    expect(manipulateOrder).toBeLessThan(readOrder);
+  });
+
+  it('單一單品的照片檔案遺失（讀取失敗）時，該筆 photoBase64 為空字串，其餘單品照常處理，並回傳 skippedPhotoCount', async () => {
+    const secondItem: Item = { ...sampleItem, id: 'item-2' };
+    await storage.saveItems([sampleItem, secondItem]);
+
+    (ImageManipulator.manipulateAsync as jest.Mock).mockImplementationOnce(() => {
+      throw new Error('照片檔案不存在');
+    });
+
+    const { payload, skippedPhotoCount } = await buildBackupPayload();
+
+    expect(payload.items).toHaveLength(2);
+    expect(payload.items[0].photoBase64).toBe('');
+    expect(payload.items[1].photoBase64).toBe('base64-photo-content');
+    expect(skippedPhotoCount).toBe(1);
+  });
+
+  it('讀取 base64 本身失敗（而非縮圖失敗）時，也會被視為照片遺失並繼續處理', async () => {
+    await storage.saveItems([sampleItem]);
+    (FileSystem.readAsStringAsync as jest.Mock).mockRejectedValueOnce(new Error('讀取失敗'));
+
+    const { payload, skippedPhotoCount } = await buildBackupPayload();
+
+    expect(payload.items).toHaveLength(1);
+    expect(payload.items[0].photoBase64).toBe('');
+    expect(skippedPhotoCount).toBe(1);
   });
 });
 
@@ -295,5 +347,73 @@ describe('backupService.applyBackupPayload - 進度回呼', () => {
 
     expect(onProgress).toHaveBeenNthCalledWith(1, 1, 2);
     expect(onProgress).toHaveBeenNthCalledWith(2, 2, 2);
+  });
+});
+
+describe('backupService.applyBackupPayload - 照片遺失（photoBase64 為空字串）', () => {
+  it('不呼叫寫入照片檔案，直接給予空字串 photoUri，不中斷其餘處理', async () => {
+    const payload = buildTestPayload({
+      items: [
+        {
+          id: 'no-photo',
+          name: '照片已遺失的單品',
+          photoBase64: '',
+          price: 1,
+          createdAt: '2026-01-01T00:00:00.000Z',
+          unlockDate: '2026-01-02T00:00:00.000Z',
+          conditionChecks: [false, false, false, false, false, false],
+          status: 'cooling',
+        },
+      ],
+    });
+
+    const result = await applyBackupPayload(payload, 'overwrite');
+
+    const savedItems = await storage.getItems();
+    expect(savedItems).toHaveLength(1);
+    expect(savedItems[0].photoUri).toBe('');
+    expect(FileSystem.writeAsStringAsync).not.toHaveBeenCalled();
+    expect(result.importedItemCount).toBe(1);
+  });
+});
+
+describe('backupService round trip：buildBackupPayload → JSON.stringify → parseBackupPayload → applyBackupPayload', () => {
+  it('匯出後再以覆蓋模式匯入，能還原原始資料（photoUri 允許不同，改為指向本機新產生的照片檔案）', async () => {
+    await storage.saveItems([sampleItem]);
+    await storage.saveHistory([
+      { id: 'h1', itemName: '測試外套', price: 1000, outcome: 'resisted', recordedAt: '2026-07-29T00:00:00.000Z' },
+    ]);
+    await storage.saveAppState({
+      ninjaPoints: 3,
+      conditionLabels: ['a'],
+      themeColor: '#EAAFB3',
+      soundEnabled: true,
+    });
+
+    const { payload } = await buildBackupPayload();
+    const raw = JSON.stringify(payload);
+    const parsed = parseBackupPayload(raw);
+
+    await applyBackupPayload(parsed, 'overwrite');
+
+    const savedItems = await storage.getItems();
+    expect(savedItems).toHaveLength(1);
+    expect(typeof savedItems[0].photoUri).toBe('string');
+    expect(savedItems[0].photoUri.length).toBeGreaterThan(0);
+    expect(savedItems[0].photoUri).not.toBe(sampleItem.photoUri);
+    expect(savedItems[0].photoUri).toMatch(/^mock:\/\/document\/photos\//);
+    expect(savedItems[0]).toEqual({ ...sampleItem, photoUri: savedItems[0].photoUri });
+
+    const savedHistory = await storage.getHistory();
+    expect(savedHistory).toEqual([
+      { id: 'h1', itemName: '測試外套', price: 1000, outcome: 'resisted', recordedAt: '2026-07-29T00:00:00.000Z' },
+    ]);
+
+    expect(await storage.getAppState()).toEqual({
+      ninjaPoints: 3,
+      conditionLabels: ['a'],
+      themeColor: '#EAAFB3',
+      soundEnabled: true,
+    });
   });
 });

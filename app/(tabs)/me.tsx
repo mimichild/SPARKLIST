@@ -89,23 +89,37 @@ export default function MeScreen() {
 
   const runExport = async (destination: 'share' | 'local') => {
     try {
+      // 掃掉上一次匯出留下的暫存備份檔（分享用的暫存檔不再由 shareBackupFile
+      // 自己刪除，改成每次匯出開始時清一次舊的，確保不會刪到還在被分享中的檔案）。
+      await backupFileService.cleanupStaleBackupTempFiles();
+
+      // 「存到本機」要先跳出資料夾選擇器並取得使用者確認，取消的話直接結束，
+      // 完全不顯示進度條、也不當成錯誤處理；只有選定資料夾後才開始組備份資料。
+      let folder: { directoryUri: string; folderDisplayName: string } | null = null;
+      if (destination === 'local') {
+        folder = await backupFileService.requestBackupFolder();
+        if (!folder) {
+          return;
+        }
+      }
+
       setExportProgress({ current: 0, total: 0 });
-      const payload = await backupService.buildBackupPayload((current, total) => {
+      const { payload, skippedPhotoCount } = await backupService.buildBackupPayload((current, total) => {
         setExportProgress({ current, total });
       });
       const filename = backupService.buildBackupFilename(new Date());
       const content = JSON.stringify(payload);
+      const skippedSuffix = skippedPhotoCount > 0 ? `（其中 ${skippedPhotoCount} 張照片遺失，已略過）` : '';
 
       if (destination === 'share') {
         setExportProgress(null);
         await backupFileService.shareBackupFile(content, filename);
-        Alert.alert('已透過分享完成匯出');
+        Alert.alert(`已透過分享完成匯出${skippedSuffix}`);
       } else {
-        const result = await backupFileService.saveBackupToFolder(content, filename);
+        // folder 在這個分支必為非 null：destination === 'local' 時上面已經確認過。
+        await backupFileService.writeBackupToFolder(folder!.directoryUri, content, filename);
         setExportProgress(null);
-        if (result) {
-          Alert.alert('已匯出', `存於：${result.folderDisplayName}/${filename}`);
-        }
+        Alert.alert('已匯出', `存於：${folder!.folderDisplayName}/${filename}${skippedSuffix}`);
       }
     } catch (error) {
       setExportProgress(null);
