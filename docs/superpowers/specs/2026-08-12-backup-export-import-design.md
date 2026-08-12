@@ -1,7 +1,7 @@
 # SPARK LIST 資料匯出／匯入 設計文件
 
 日期：2026-08-12
-狀態：已通過使用者確認，待寫入實作計畫
+狀態：實作計畫已完成，見 `docs/superpowers/plans/2026-08-12-backup-export-import.md`
 
 ## 1. 產品概述
 
