@@ -15,6 +15,9 @@ import {
 } from '../../src/constants/theme';
 import { MIN_CONDITIONS_TO_UNLOCK, MAX_CONDITION_COUNT } from '../../src/constants/conditions';
 import type { HistoryStats } from '../../src/types/item';
+import { ProgressModal } from '../../src/components/ProgressModal';
+import * as backupService from '../../src/services/backupService';
+import * as backupFileService from '../../src/services/backupFileService';
 
 export default function MeScreen() {
   const {
@@ -34,6 +37,8 @@ export default function MeScreen() {
   // below doesn't clobber them if conditionLabels changes externally
   // (e.g. hydrate() resolving) while the user is mid-edit.
   const [isDirty, setIsDirty] = useState(false);
+  const [exportProgress, setExportProgress] = useState<{ current: number; total: number } | null>(null);
+  const [importProgress, setImportProgress] = useState<{ current: number; total: number } | null>(null);
 
   // Hydration should only run once on mount, not on every focus.
   useEffect(() => {
@@ -82,6 +87,85 @@ export default function MeScreen() {
     Alert.alert('已取消，條件內容恢復原狀');
   };
 
+  const runExport = async (destination: 'share' | 'local') => {
+    try {
+      setExportProgress({ current: 0, total: 0 });
+      const payload = await backupService.buildBackupPayload((current, total) => {
+        setExportProgress({ current, total });
+      });
+      const filename = backupService.buildBackupFilename(new Date());
+      const content = JSON.stringify(payload);
+
+      if (destination === 'share') {
+        setExportProgress(null);
+        await backupFileService.shareBackupFile(content, filename);
+        Alert.alert('已透過分享完成匯出');
+      } else {
+        const result = await backupFileService.saveBackupToFolder(content, filename);
+        setExportProgress(null);
+        if (result) {
+          Alert.alert('已匯出', `存於：${result.folderDisplayName}/${filename}`);
+        }
+      }
+    } catch (error) {
+      setExportProgress(null);
+      Alert.alert('匯出失敗', error instanceof Error ? error.message : '發生未知錯誤');
+    }
+  };
+
+  const handleExportPress = () => {
+    Alert.alert('匯出資料', '請選擇匯出方式', [
+      { text: '分享', onPress: () => runExport('share') },
+      { text: '存到本機', onPress: () => runExport('local') },
+      { text: '取消', style: 'cancel' },
+    ]);
+  };
+
+  const runImport = async (payload: backupService.BackupPayload, mode: backupService.ImportMode) => {
+    try {
+      setImportProgress({ current: 0, total: 0 });
+      const result = await backupService.applyBackupPayload(payload, mode, (current, total) => {
+        setImportProgress({ current, total });
+      });
+      setImportProgress(null);
+      await hydrate();
+      const history = await storage.getHistory();
+      setStats(computeStats(history));
+      Alert.alert('已匯入', `已匯入 ${result.importedItemCount} 筆單品`);
+    } catch (error) {
+      setImportProgress(null);
+      Alert.alert('匯入失敗', error instanceof Error ? error.message : '發生未知錯誤');
+    }
+  };
+
+  const handleImportPress = async () => {
+    const content = await backupFileService.pickBackupFile();
+    if (!content) {
+      return;
+    }
+
+    let payload: backupService.BackupPayload;
+    try {
+      payload = backupService.parseBackupPayload(content);
+    } catch (error) {
+      Alert.alert('匯入失敗', error instanceof Error ? error.message : '發生未知錯誤');
+      return;
+    }
+
+    const existingItems = await storage.getItems();
+    const existingHistory = await storage.getHistory();
+
+    if (existingItems.length > 0 || existingHistory.length > 0) {
+      Alert.alert('匯入資料', '本機已有資料，請選擇匯入方式', [
+        { text: '覆蓋', onPress: () => runImport(payload, 'overwrite') },
+        { text: '合併', onPress: () => runImport(payload, 'merge') },
+        { text: '取消', style: 'cancel' },
+      ]);
+    } else {
+      runImport(payload, 'overwrite');
+    }
+  };
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <RankBadge points={ninjaPoints} rank={currentRank} accentColor={themeColor} />
@@ -117,6 +201,35 @@ export default function MeScreen() {
           trackColor={{ true: themeColor }}
         />
       </View>
+
+      <Text style={styles.sectionTitle}>資料備份</Text>
+      <View style={styles.backupRow}>
+        <Pressable
+          testID="export-data-button"
+          style={[styles.backupButton, { backgroundColor: themeColor }]}
+          onPress={handleExportPress}
+        >
+          <Text style={styles.backupButtonText}>匯出資料</Text>
+        </Pressable>
+        <Pressable testID="import-data-button" style={styles.backupButtonOutline} onPress={handleImportPress}>
+          <Text style={styles.backupButtonOutlineText}>匯入資料</Text>
+        </Pressable>
+      </View>
+
+      <ProgressModal
+        visible={exportProgress !== null}
+        label="匯出中"
+        current={exportProgress?.current ?? 0}
+        total={exportProgress?.total ?? 0}
+        accentColor={themeColor}
+      />
+      <ProgressModal
+        visible={importProgress !== null}
+        label="匯入中"
+        current={importProgress?.current ?? 0}
+        total={importProgress?.total ?? 0}
+        accentColor={themeColor}
+      />
 
       <Text style={styles.sectionTitle}>編輯條件</Text>
 
@@ -233,4 +346,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   saveButtonText: { fontWeight: '600', fontSize: TYPE_SCALE.body, color: '#FFFFFF' },
+  backupRow: { flexDirection: 'row', gap: 8 },
+  backupButton: { flex: 1, padding: SPACING.verticalMedium, borderRadius: RADIUS.pill, alignItems: 'center' },
+  backupButtonText: { fontWeight: '600', fontSize: TYPE_SCALE.body, color: '#FFFFFF' },
+  backupButtonOutline: {
+    flex: 1,
+    padding: SPACING.verticalMedium,
+    borderRadius: RADIUS.pill,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  backupButtonOutlineText: { fontWeight: '600', fontSize: TYPE_SCALE.body, color: COLORS.textPrimary },
 });

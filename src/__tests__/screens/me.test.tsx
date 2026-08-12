@@ -6,6 +6,14 @@ import { useAppStore } from '../../store/useAppStore';
 import * as storage from '../../services/storage';
 import { DEFAULT_CONDITION_LABELS } from '../../constants/conditions';
 import { DEFAULT_THEME_COLOR } from '../../constants/theme';
+import * as backupService from '../../services/backupService';
+import * as backupFileService from '../../services/backupFileService';
+
+jest.mock('../../services/backupService');
+jest.mock('../../services/backupFileService');
+
+const mockedBackupService = backupService as jest.Mocked<typeof backupService>;
+const mockedBackupFileService = backupFileService as jest.Mocked<typeof backupFileService>;
 
 // See cooling.test.tsx for why @react-navigation/native is mocked this way:
 // the real useFocusEffect needs a NavigationContainer that isn't present in
@@ -33,6 +41,18 @@ beforeEach(async () => {
     hydrated: false,
   });
   jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+  mockedBackupService.buildBackupPayload.mockResolvedValue({
+    schemaVersion: 1,
+    exportedAt: '2026-08-12T00:00:00.000Z',
+    appState: null,
+    items: [],
+    history: [],
+  });
+  mockedBackupService.buildBackupFilename.mockReturnValue('SPARKLIST-備份-20260812-0000.json');
+  mockedBackupService.applyBackupPayload.mockResolvedValue({ importedItemCount: 0 });
+  mockedBackupFileService.shareBackupFile.mockResolvedValue(undefined);
+  mockedBackupFileService.saveBackupToFolder.mockResolvedValue({ folderDisplayName: 'Download' });
+  mockedBackupFileService.pickBackupFile.mockResolvedValue(null);
 });
 
 describe('MeScreen', () => {
@@ -228,5 +248,167 @@ describe('MeScreen', () => {
     // 驗證未被修改的欄位確實被外部更新的值替換（用於確認測試邏輯正確）
     // 因為編輯中，draftLabels 不應該更新
     expect(screen.queryByDisplayValue(newConditionLabels[1])).toBeFalsy();
+  });
+
+  it('按下匯出資料後選擇「分享」，會呼叫 shareBackupFile 並在完成後提示', async () => {
+    await render(<MeScreen />);
+
+    (Alert.alert as jest.Mock).mockImplementation((title, _message, buttons) => {
+      if (title === '匯出資料') {
+        buttons?.find((b: { text: string }) => b.text === '分享')?.onPress?.();
+      }
+    });
+
+    await act(async () => {
+      await fireEvent.press(screen.getByTestId('export-data-button'));
+    });
+
+    await waitFor(() => {
+      expect(mockedBackupFileService.shareBackupFile).toHaveBeenCalledWith(
+        expect.any(String),
+        'SPARKLIST-備份-20260812-0000.json'
+      );
+    });
+    expect(Alert.alert).toHaveBeenCalledWith('已透過分享完成匯出');
+  });
+
+  it('按下匯出資料後選擇「存到本機」，完成後提示儲存位置', async () => {
+    await render(<MeScreen />);
+
+    (Alert.alert as jest.Mock).mockImplementation((title, _message, buttons) => {
+      if (title === '匯出資料') {
+        buttons?.find((b: { text: string }) => b.text === '存到本機')?.onPress?.();
+      }
+    });
+
+    await act(async () => {
+      await fireEvent.press(screen.getByTestId('export-data-button'));
+    });
+
+    await waitFor(() => {
+      expect(Alert.alert).toHaveBeenCalledWith('已匯出', expect.stringContaining('Download'));
+    });
+  });
+
+  it('存到本機時使用者取消資料夾選擇，不顯示完成提示', async () => {
+    mockedBackupFileService.saveBackupToFolder.mockResolvedValueOnce(null);
+    await render(<MeScreen />);
+
+    (Alert.alert as jest.Mock).mockImplementation((title, _message, buttons) => {
+      if (title === '匯出資料') {
+        buttons?.find((b: { text: string }) => b.text === '存到本機')?.onPress?.();
+      }
+    });
+
+    await act(async () => {
+      await fireEvent.press(screen.getByTestId('export-data-button'));
+    });
+
+    await waitFor(() => {
+      expect(mockedBackupFileService.saveBackupToFolder).toHaveBeenCalled();
+    });
+    expect(Alert.alert).not.toHaveBeenCalledWith('已匯出', expect.anything());
+  });
+
+  it('本機沒有資料時，按下匯入資料不會詢問覆蓋或合併，直接匯入', async () => {
+    mockedBackupFileService.pickBackupFile.mockResolvedValueOnce('{"valid":"json"}');
+    mockedBackupService.parseBackupPayload.mockReturnValueOnce({
+      schemaVersion: 1,
+      exportedAt: '2026-08-12T00:00:00.000Z',
+      appState: null,
+      items: [],
+      history: [],
+    });
+    mockedBackupService.applyBackupPayload.mockResolvedValueOnce({ importedItemCount: 3 });
+
+    await render(<MeScreen />);
+
+    await act(async () => {
+      await fireEvent.press(screen.getByTestId('import-data-button'));
+    });
+
+    await waitFor(() => {
+      expect(mockedBackupService.applyBackupPayload).toHaveBeenCalledWith(
+        expect.anything(),
+        'overwrite',
+        expect.any(Function)
+      );
+    });
+    expect(Alert.alert).toHaveBeenCalledWith('已匯入', '已匯入 3 筆單品');
+  });
+
+  it('本機已有資料時，按下匯入資料會詢問覆蓋或合併，選「合併」會以合併模式匯入', async () => {
+    await storage.saveItems([
+      {
+        id: 'local-1',
+        name: '本機單品',
+        photoUri: 'mock://p.jpg',
+        price: 1,
+        createdAt: '2026-01-01T00:00:00.000Z',
+        unlockDate: '2026-01-02T00:00:00.000Z',
+        conditionChecks: [false, false, false, false, false, false],
+        status: 'cooling',
+      },
+    ]);
+    mockedBackupFileService.pickBackupFile.mockResolvedValueOnce('{"valid":"json"}');
+    mockedBackupService.parseBackupPayload.mockReturnValueOnce({
+      schemaVersion: 1,
+      exportedAt: '2026-08-12T00:00:00.000Z',
+      appState: null,
+      items: [],
+      history: [],
+    });
+    mockedBackupService.applyBackupPayload.mockResolvedValueOnce({ importedItemCount: 5 });
+
+    await render(<MeScreen />);
+
+    (Alert.alert as jest.Mock).mockImplementation((title, _message, buttons) => {
+      if (title === '匯入資料') {
+        buttons?.find((b: { text: string }) => b.text === '合併')?.onPress?.();
+      }
+    });
+
+    await act(async () => {
+      await fireEvent.press(screen.getByTestId('import-data-button'));
+    });
+
+    await waitFor(() => {
+      expect(mockedBackupService.applyBackupPayload).toHaveBeenCalledWith(
+        expect.anything(),
+        'merge',
+        expect.any(Function)
+      );
+    });
+    expect(Alert.alert).toHaveBeenCalledWith('已匯入', '已匯入 5 筆單品');
+  });
+
+  it('匯入檔案格式錯誤時顯示錯誤提示，不會呼叫 applyBackupPayload', async () => {
+    mockedBackupFileService.pickBackupFile.mockResolvedValueOnce('not valid json');
+    mockedBackupService.parseBackupPayload.mockImplementationOnce(() => {
+      throw new Error('匯入檔案不是有效的 JSON 格式');
+    });
+
+    await render(<MeScreen />);
+
+    await act(async () => {
+      await fireEvent.press(screen.getByTestId('import-data-button'));
+    });
+
+    await waitFor(() => {
+      expect(Alert.alert).toHaveBeenCalledWith('匯入失敗', '匯入檔案不是有效的 JSON 格式');
+    });
+    expect(mockedBackupService.applyBackupPayload).not.toHaveBeenCalled();
+  });
+
+  it('使用者取消選擇匯入檔案時，不做任何事', async () => {
+    mockedBackupFileService.pickBackupFile.mockResolvedValueOnce(null);
+
+    await render(<MeScreen />);
+
+    await act(async () => {
+      await fireEvent.press(screen.getByTestId('import-data-button'));
+    });
+
+    expect(mockedBackupService.parseBackupPayload).not.toHaveBeenCalled();
   });
 });
