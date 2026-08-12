@@ -54,3 +54,34 @@ export function buildBackupFilename(date: Date): string {
   const mm = pad(date.getMinutes());
   return `SPARKLIST-備份-${y}${m}${d}-${hh}${mm}.json`;
 }
+
+export function parseBackupPayload(raw: string): BackupPayload {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    throw new Error('匯入檔案不是有效的 JSON 格式');
+  }
+
+  if (
+    typeof parsed !== 'object' ||
+    parsed === null ||
+    !('schemaVersion' in parsed) ||
+    !('items' in parsed) ||
+    !('history' in parsed)
+  ) {
+    throw new Error('匯入檔案格式不正確');
+  }
+
+  const payload = parsed as BackupPayload;
+
+  if (!Array.isArray(payload.items) || !Array.isArray(payload.history)) {
+    throw new Error('匯入檔案格式不正確');
+  }
+
+  if (payload.schemaVersion !== BACKUP_SCHEMA_VERSION) {
+    throw new Error(`不支援的備份檔版本（schemaVersion: ${payload.schemaVersion}）`);
+  }
+
+  return payload;
+}
