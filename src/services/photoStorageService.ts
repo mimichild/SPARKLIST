@@ -26,3 +26,16 @@ export async function persistPhotoAsync(sourceUri: string): Promise<string> {
 
   return destination;
 }
+
+// 匯入流程用：把備份檔裡的 base64 照片內容寫回本機的永久儲存目錄，
+// 產生一個新的 photoUri（不能沿用匯出檔裡的路徑，裝置間路徑不通用）。
+export async function persistPhotoFromBase64Async(base64: string, extension = '.jpg'): Promise<string> {
+  await ensurePhotosDirAsync();
+
+  const fileName = `photo-${Date.now()}-${Math.random().toString(36).slice(2, 8)}${extension}`;
+  const destination = `${PHOTOS_DIR}${fileName}`;
+
+  await FileSystem.writeAsStringAsync(destination, base64, { encoding: FileSystem.EncodingType.Base64 });
+
+  return destination;
+}
