@@ -1,6 +1,7 @@
 import * as FileSystem from 'expo-file-system/legacy';
 import * as storage from './storage';
 import type { PersistedAppState } from './storage';
+import { persistPhotoFromBase64Async } from './photoStorageService';
 import type { Item, HistoryLogEntry } from '../types/item';
 
 export const BACKUP_SCHEMA_VERSION = 1;
@@ -84,4 +85,54 @@ export function parseBackupPayload(raw: string): BackupPayload {
   }
 
   return payload;
+}
+
+export type ImportMode = 'overwrite' | 'merge';
+
+export interface ApplyBackupResult {
+  importedItemCount: number;
+}
+
+export async function applyBackupPayload(
+  payload: BackupPayload,
+  mode: ImportMode,
+  onProgress?: (current: number, total: number) => void
+): Promise<ApplyBackupResult> {
+  const total = payload.items.length;
+  const restoredItems: Item[] = [];
+
+  for (let i = 0; i < payload.items.length; i += 1) {
+    const { photoBase64, ...rest } = payload.items[i];
+    const photoUri = await persistPhotoFromBase64Async(photoBase64);
+    restoredItems.push({ ...rest, photoUri });
+    onProgress?.(i + 1, total);
+  }
+
+  let finalItems: Item[];
+  let finalHistory: HistoryLogEntry[];
+
+  if (mode === 'overwrite') {
+    finalItems = restoredItems;
+    finalHistory = payload.history;
+  } else {
+    const existingItems = await storage.getItems();
+    const existingHistory = await storage.getHistory();
+    finalItems = mergeById(existingItems, restoredItems);
+    finalHistory = mergeById(existingHistory, payload.history);
+  }
+
+  await storage.saveItems(finalItems);
+  await storage.saveHistory(finalHistory);
+
+  if (mode === 'overwrite' && payload.appState) {
+    await storage.saveAppState(payload.appState);
+  }
+
+  return { importedItemCount: restoredItems.length };
+}
+
+function mergeById<T extends { id: string }>(existing: T[], incoming: T[]): T[] {
+  const incomingIds = new Set(incoming.map((entry) => entry.id));
+  const keptExisting = existing.filter((entry) => !incomingIds.has(entry.id));
+  return [...keptExisting, ...incoming];
 }

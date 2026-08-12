@@ -1,7 +1,14 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as storage from '../../services/storage';
-import { buildBackupPayload, buildBackupFilename, parseBackupPayload, BACKUP_SCHEMA_VERSION } from '../../services/backupService';
+import {
+  buildBackupPayload,
+  buildBackupFilename,
+  parseBackupPayload,
+  applyBackupPayload,
+  BACKUP_SCHEMA_VERSION,
+  type BackupPayload,
+} from '../../services/backupService';
 import type { Item } from '../../types/item';
 
 const sampleItem: Item = {
@@ -123,5 +130,136 @@ describe('backupService.parseBackupPayload', () => {
   it('items 或 history 不是陣列時拋出錯誤', () => {
     const invalid = { ...validPayload, items: 'not-an-array' };
     expect(() => parseBackupPayload(JSON.stringify(invalid))).toThrow('匯入檔案格式不正確');
+  });
+});
+
+const existingItem: Item = {
+  id: 'item-local',
+  name: '本機單品',
+  photoUri: 'mock://document/photos/local.jpg',
+  price: 500,
+  createdAt: '2026-07-01T00:00:00.000Z',
+  unlockDate: '2026-07-10T00:00:00.000Z',
+  conditionChecks: [false, false, false, false, false, false],
+  status: 'cooling',
+};
+
+function buildTestPayload(overrides: Partial<BackupPayload> = {}): BackupPayload {
+  return {
+    schemaVersion: BACKUP_SCHEMA_VERSION,
+    exportedAt: '2026-08-12T10:00:00.000Z',
+    appState: { ninjaPoints: 9, conditionLabels: ['x'], themeColor: '#111111', soundEnabled: false },
+    items: [
+      {
+        id: 'item-local',
+        name: '匯入版本的名稱',
+        photoBase64: 'incoming-base64',
+        price: 999,
+        createdAt: '2026-08-01T00:00:00.000Z',
+        unlockDate: '2026-08-08T00:00:00.000Z',
+        conditionChecks: [true, true, false, false, false, false],
+        status: 'cooling',
+      },
+    ],
+    history: [
+      { id: 'h-imported', itemName: '匯入版本的名稱', price: 999, outcome: 'resisted', recordedAt: '2026-08-01T00:00:00.000Z' },
+    ],
+    ...overrides,
+  };
+}
+
+describe('backupService.applyBackupPayload - 覆蓋模式', () => {
+  it('整批取代 items、history、appState', async () => {
+    await storage.saveItems([existingItem]);
+    await storage.saveHistory([
+      { id: 'h-local', itemName: '本機單品', price: 500, outcome: 'resisted', recordedAt: '2026-07-01T00:00:00.000Z' },
+    ]);
+
+    const result = await applyBackupPayload(buildTestPayload(), 'overwrite');
+
+    const savedItems = await storage.getItems();
+    expect(savedItems).toHaveLength(1);
+    expect(savedItems[0].name).toBe('匯入版本的名稱');
+    expect(savedItems[0].photoUri).toMatch(/^mock:\/\/document\/photos\/photo-.+/);
+
+    const savedHistory = await storage.getHistory();
+    expect(savedHistory).toEqual([
+      { id: 'h-imported', itemName: '匯入版本的名稱', price: 999, outcome: 'resisted', recordedAt: '2026-08-01T00:00:00.000Z' },
+    ]);
+
+    expect(await storage.getAppState()).toEqual({
+      ninjaPoints: 9,
+      conditionLabels: ['x'],
+      themeColor: '#111111',
+      soundEnabled: false,
+    });
+    expect(result.importedItemCount).toBe(1);
+  });
+});
+
+describe('backupService.applyBackupPayload - 合併模式', () => {
+  it('id 相同時以匯入檔為準覆蓋，本機獨有的 id 保留，appState 維持本機原值', async () => {
+    await storage.saveAppState({
+      ninjaPoints: 1,
+      conditionLabels: ['本機'],
+      themeColor: '#EAAFB3',
+      soundEnabled: true,
+    });
+    await storage.saveItems([existingItem, { ...existingItem, id: 'item-local-only', name: '本機獨有' }]);
+    await storage.saveHistory([
+      { id: 'h-local-only', itemName: '本機獨有', price: 200, outcome: 'resisted', recordedAt: '2026-06-01T00:00:00.000Z' },
+    ]);
+
+    await applyBackupPayload(buildTestPayload(), 'merge');
+
+    const savedItems = await storage.getItems();
+    expect(savedItems.map((i) => i.id).sort()).toEqual(['item-local', 'item-local-only'].sort());
+    expect(savedItems.find((i) => i.id === 'item-local')?.name).toBe('匯入版本的名稱');
+    expect(savedItems.find((i) => i.id === 'item-local-only')?.name).toBe('本機獨有');
+
+    const savedHistory = await storage.getHistory();
+    expect(savedHistory.map((h) => h.id).sort()).toEqual(['h-imported', 'h-local-only'].sort());
+
+    expect(await storage.getAppState()).toEqual({
+      ninjaPoints: 1,
+      conditionLabels: ['本機'],
+      themeColor: '#EAAFB3',
+      soundEnabled: true,
+    });
+  });
+});
+
+describe('backupService.applyBackupPayload - 進度回呼', () => {
+  it('每寫回一筆照片就呼叫 onProgress', async () => {
+    const payload = buildTestPayload({
+      items: [
+        {
+          id: 'a',
+          name: 'A',
+          photoBase64: 'x',
+          price: 1,
+          createdAt: '2026-01-01T00:00:00.000Z',
+          unlockDate: '2026-01-02T00:00:00.000Z',
+          conditionChecks: [false, false, false, false, false, false],
+          status: 'cooling',
+        },
+        {
+          id: 'b',
+          name: 'B',
+          photoBase64: 'y',
+          price: 1,
+          createdAt: '2026-01-01T00:00:00.000Z',
+          unlockDate: '2026-01-02T00:00:00.000Z',
+          conditionChecks: [false, false, false, false, false, false],
+          status: 'cooling',
+        },
+      ],
+    });
+    const onProgress = jest.fn();
+
+    await applyBackupPayload(payload, 'overwrite', onProgress);
+
+    expect(onProgress).toHaveBeenNthCalledWith(1, 1, 2);
+    expect(onProgress).toHaveBeenNthCalledWith(2, 2, 2);
   });
 });
