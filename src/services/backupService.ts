@@ -80,6 +80,23 @@ export function parseBackupPayload(raw: string): BackupPayload {
     throw new Error('匯入檔案格式不正確');
   }
 
+  for (const item of payload.items) {
+    if (
+      typeof item !== 'object' ||
+      item === null ||
+      typeof (item as Partial<BackupItem>).id !== 'string' ||
+      typeof (item as Partial<BackupItem>).photoBase64 !== 'string'
+    ) {
+      throw new Error('匯入檔案格式不正確');
+    }
+  }
+
+  for (const entry of payload.history) {
+    if (typeof entry !== 'object' || entry === null || typeof (entry as Partial<HistoryLogEntry>).id !== 'string') {
+      throw new Error('匯入檔案格式不正確');
+    }
+  }
+
   if (payload.schemaVersion !== BACKUP_SCHEMA_VERSION) {
     throw new Error(`不支援的備份檔版本（schemaVersion: ${payload.schemaVersion}）`);
   }

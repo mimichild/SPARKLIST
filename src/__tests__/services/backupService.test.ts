@@ -131,6 +131,40 @@ describe('backupService.parseBackupPayload', () => {
     const invalid = { ...validPayload, items: 'not-an-array' };
     expect(() => parseBackupPayload(JSON.stringify(invalid))).toThrow('匯入檔案格式不正確');
   });
+
+  it('items 內含 null 元素時拋出錯誤', () => {
+    const invalid = { ...validPayload, items: [null] };
+    expect(() => parseBackupPayload(JSON.stringify(invalid))).toThrow('匯入檔案格式不正確');
+  });
+
+  it('items 內物件缺少 photoBase64 時拋出錯誤', () => {
+    const invalid = { ...validPayload, items: [{ id: 'x' }] };
+    expect(() => parseBackupPayload(JSON.stringify(invalid))).toThrow('匯入檔案格式不正確');
+  });
+
+  it('items 內物件缺少 id 時拋出錯誤', () => {
+    const invalid = { ...validPayload, items: [{ photoBase64: 'abc' }] };
+    expect(() => parseBackupPayload(JSON.stringify(invalid))).toThrow('匯入檔案格式不正確');
+  });
+
+  it('history 內含 null 元素時拋出錯誤', () => {
+    const invalid = { ...validPayload, history: [null] };
+    expect(() => parseBackupPayload(JSON.stringify(invalid))).toThrow('匯入檔案格式不正確');
+  });
+
+  it('history 內物件缺少 id 時拋出錯誤', () => {
+    const invalid = { ...validPayload, history: [{ itemName: '沒有 id' }] };
+    expect(() => parseBackupPayload(JSON.stringify(invalid))).toThrow('匯入檔案格式不正確');
+  });
+
+  it('items/history 內元素格式正確時可正常解析', () => {
+    const valid = {
+      ...validPayload,
+      items: [{ id: 'a', photoBase64: '' }],
+      history: [{ id: 'h1' }],
+    };
+    expect(() => parseBackupPayload(JSON.stringify(valid))).not.toThrow();
+  });
 });
 
 const existingItem: Item = {
