@@ -77,7 +77,7 @@ describe('backupFileService.extractFolderDisplayName', () => {
 });
 
 describe('backupFileService.pickBackupFile', () => {
-  it('使用者選擇檔案後回傳檔案內容字串', async () => {
+  it('使用者選擇檔案後回傳檔案內容字串，且用寬鬆的 MIME 篩選（涵蓋雲端同步常見的誤判類型）並複製到快取目錄', async () => {
     (DocumentPicker.getDocumentAsync as jest.Mock).mockResolvedValueOnce({
       canceled: false,
       assets: [{ uri: 'mock://picked/backup.json', name: 'backup.json' }],
@@ -86,6 +86,10 @@ describe('backupFileService.pickBackupFile', () => {
 
     const content = await pickBackupFile();
 
+    expect(DocumentPicker.getDocumentAsync).toHaveBeenCalledWith({
+      type: ['application/json', 'text/plain', 'application/octet-stream'],
+      copyToCacheDirectory: true,
+    });
     expect(FileSystem.readAsStringAsync).toHaveBeenCalledWith('mock://picked/backup.json', {
       encoding: FileSystem.EncodingType.UTF8,
     });

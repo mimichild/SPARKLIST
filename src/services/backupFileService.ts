@@ -46,7 +46,14 @@ export function extractFolderDisplayName(directoryUri: string): string {
 }
 
 export async function pickBackupFile(): Promise<string | null> {
-  const result = await DocumentPicker.getDocumentAsync({ type: 'application/json' });
+  // MIME 篩選刻意放寬：雲端硬碟同步回來的檔案常被系統誤判成
+  // application/octet-stream 或 text/plain，篩選太嚴會讓使用者自己匯出的
+  // 備份檔在選檔器裡直接「看不到」。parseBackupPayload 對非備份檔已經有
+  // 清楚的中文錯誤訊息，放寬篩選是安全的，壞檔案還是會在下一步被擋下。
+  const result = await DocumentPicker.getDocumentAsync({
+    type: ['application/json', 'text/plain', 'application/octet-stream'],
+    copyToCacheDirectory: true,
+  });
   if (result.canceled || !result.assets || result.assets.length === 0) {
     return null;
   }
